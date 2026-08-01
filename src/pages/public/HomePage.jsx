@@ -73,9 +73,8 @@ const PORTAL_FEATURES = [
 function Hero() {
   return (
     <div className="relative overflow-hidden bg-cream">
-      <div className="pointer-events-none absolute -right-40 -top-40 h-[34rem] w-[34rem] rounded-full bg-brand-200/35 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-52 -left-32 h-[28rem] w-[28rem] rounded-full bg-blossom-200/50 blur-3xl" />
-      <div className="pointer-events-none absolute left-1/2 top-24 h-64 w-64 -translate-x-1/2 rounded-full bg-blossom-100/60 blur-3xl" />
+      <div className="pointer-events-none absolute -right-40 -top-40 h-[34rem] w-[34rem] rounded-full bg-blossom-200/60 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-52 -left-32 h-[28rem] w-[28rem] rounded-full bg-brand-200/40 blur-3xl" />
 
       <Container className="relative grid items-center gap-16 py-20 lg:grid-cols-[1.05fr_1fr] lg:py-28">
         <div>
@@ -122,9 +121,9 @@ function Hero() {
         </div>
 
         <Reveal delay={180} className="relative">
-          <PhotoPlaceholder label="Hero photo — pupils at play" ratio="aspect-[4/5]" className="shadow-2xl shadow-brand-900/10" />
-          <div className="absolute -bottom-6 -left-6 hidden w-56 rounded-2xl bg-white p-5 shadow-xl shadow-brand-900/10 ring-1 ring-blossom-100 sm:block">
-            <p className="font-display text-3xl text-brand-600">1:8</p>
+          <PhotoPlaceholder label="Hero photo — pupils at play" ratio="aspect-[4/5]" className="shadow-2xl shadow-blossom-500/20" />
+          <div className="absolute -bottom-6 -left-6 hidden w-56 rounded-2xl bg-white p-5 shadow-xl shadow-blossom-500/15 ring-1 ring-blossom-200 sm:block">
+            <p className="font-display text-3xl text-blossom-600">1:8</p>
             <p className="mt-1 text-sm text-ink/60">Teacher to pupil ratio, so no child is overlooked.</p>
           </div>
           <div className="absolute -right-4 top-10 hidden rounded-2xl bg-ink px-5 py-4 text-white shadow-xl sm:block">
@@ -134,7 +133,7 @@ function Hero() {
         </Reveal>
       </Container>
 
-      <div className="relative border-t border-blossom-100 bg-white/70">
+      <div className="relative border-t border-blossom-200 bg-white/70">
         <Container className="grid grid-cols-2 gap-8 py-10 lg:grid-cols-4">
           {STATS.map((stat, index) => (
             <Reveal key={stat.label} delay={index * 70}>
@@ -169,7 +168,7 @@ function MissionVision() {
           />
 
           <div className="mt-10 grid gap-5 sm:grid-cols-2">
-            <Reveal className="rounded-3xl bg-brand-50 p-7">
+            <Reveal className="rounded-3xl bg-blossom-50 p-7 ring-1 ring-blossom-200">
               <h3 className="font-display text-xl text-ink">Our mission</h3>
               <p className="mt-3 text-sm leading-relaxed text-ink/70">
                 To inspire young minds to think creatively, learn joyfully and act compassionately.
@@ -216,14 +215,14 @@ function Programmes() {
           <Reveal
             key={pillar.title}
             delay={index * 90}
-            className="group flex flex-col rounded-3xl bg-white p-8 ring-1 ring-brand-100 transition duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-brand-900/10"
+            className="group flex flex-col rounded-3xl bg-white p-8 ring-1 ring-blossom-100 transition duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-blossom-500/15"
           >
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 transition group-hover:bg-brand-600 group-hover:text-white">
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blossom-100 text-blossom-600 transition group-hover:bg-blossom-500 group-hover:text-white">
               <Sprout className="h-6 w-6" />
             </span>
             <h3 className="mt-6 font-display text-2xl text-ink">{pillar.title}</h3>
             <p className="mt-3 flex-1 text-sm leading-relaxed text-ink/65">{pillar.body}</p>
-            <ul className="mt-6 space-y-2 border-t border-brand-100 pt-6 text-sm text-ink/70">
+            <ul className="mt-6 space-y-2 border-t border-blossom-100 pt-6 text-sm text-ink/70">
               {pillar.points.map((point) => (
                 <li key={point} className="flex items-center gap-2.5">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />

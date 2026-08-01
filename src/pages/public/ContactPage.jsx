@@ -47,9 +47,9 @@ export function ContactPage() {
             <Reveal
               key={channel.label}
               delay={index * 90}
-              className="rounded-3xl bg-cream p-8 ring-1 ring-brand-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-brand-900/10"
+              className="rounded-3xl bg-cream p-8 ring-1 ring-blossom-200 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-blossom-500/15"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">{channel.label}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blossom-600">{channel.label}</p>
               <a
                 href={channel.href}
                 target={channel.href.startsWith('http') ? '_blank' : undefined}

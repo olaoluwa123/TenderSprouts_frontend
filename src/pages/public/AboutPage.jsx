@@ -59,7 +59,7 @@ export function AboutPage() {
               description="Our curriculum is designed to inspire curiosity, encourage growth and instil strong moral values. We combine modern teaching techniques with a faith-driven approach, ensuring children grow in knowledge and in character."
             />
             <div className="mt-10 grid gap-5 sm:grid-cols-2">
-              <Reveal className="rounded-3xl bg-brand-50 p-7">
+              <Reveal className="rounded-3xl bg-blossom-50 p-7 ring-1 ring-blossom-200">
                 <h3 className="font-display text-xl text-ink">Our mission</h3>
                 <p className="mt-3 text-sm leading-relaxed text-ink/70">
                   To inspire young minds to think creatively, learn joyfully and act compassionately.
@@ -88,9 +88,11 @@ export function AboutPage() {
             <Reveal
               key={value.title}
               delay={index * 80}
-              className="rounded-3xl bg-white p-8 ring-1 ring-brand-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-brand-900/10"
+              className="rounded-3xl bg-white p-8 ring-1 ring-blossom-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-blossom-500/15"
             >
-              <Sprout className="h-6 w-6 text-brand-600" />
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blossom-100 text-blossom-600">
+                <Sprout className="h-6 w-6" />
+              </span>
               <h3 className="mt-5 font-display text-xl text-ink">{value.title}</h3>
               <p className="mt-2.5 text-sm leading-relaxed text-ink/65">{value.body}</p>
             </Reveal>

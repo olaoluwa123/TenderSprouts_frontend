@@ -4,8 +4,8 @@ export function NotFoundPage() {
   return (
     <div className="bg-cream">
       <Container className="flex min-h-[60vh] flex-col items-center justify-center py-24 text-center">
-        <Sprout className="h-10 w-10 text-brand-500" />
-        <p className="mt-6 text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Page not found</p>
+        <Sprout className="h-10 w-10 text-blossom-500" />
+        <p className="mt-6 text-xs font-semibold uppercase tracking-[0.16em] text-blossom-700">Page not found</p>
         <h1 className="mt-4 max-w-xl font-display text-4xl leading-tight text-ink sm:text-5xl">
           This little sprout wandered off.
         </h1>

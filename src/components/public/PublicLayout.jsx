@@ -53,7 +53,7 @@ function Header() {
       <TopBar />
       <div
         className={`border-b bg-white/90 backdrop-blur transition ${
-          scrolled ? 'border-blossom-100 shadow-sm shadow-blossom-100/40' : 'border-transparent'
+          scrolled ? 'border-blossom-200 shadow-sm shadow-blossom-500/10' : 'border-transparent'
         }`}
       >
         <Container className="flex h-20 items-center justify-between gap-6">
@@ -69,7 +69,9 @@ function Header() {
                 end={item.to === '/'}
                 className={({ isActive }) =>
                   `rounded-full px-4 py-2 text-sm font-medium transition ${
-                    isActive ? 'bg-blossom-50 text-brand-800' : 'text-ink/70 hover:bg-blossom-50/80 hover:text-brand-800'
+                    isActive
+                      ? 'bg-blossom-100 text-blossom-700'
+                      : 'text-ink/70 hover:bg-blossom-50 hover:text-blossom-700'
                   }`
                 }
               >
@@ -88,7 +90,7 @@ function Header() {
           <button
             type="button"
             onClick={() => setMenuOpen((open) => !open)}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-brand-200 text-ink lg:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-blossom-300 text-blossom-700 lg:hidden"
             aria-expanded={menuOpen}
             aria-label="Toggle navigation menu"
           >
@@ -103,7 +105,7 @@ function Header() {
         </Container>
 
         {menuOpen ? (
-          <div className="border-t border-brand-100 bg-white lg:hidden">
+          <div className="border-t border-blossom-200 bg-white lg:hidden">
             <Container className="space-y-1 py-4">
               {PUBLIC_NAV.map((item) => (
                 <NavLink
@@ -113,7 +115,7 @@ function Header() {
                   onClick={closeMenu}
                   className={({ isActive }) =>
                     `block rounded-xl px-4 py-3 text-sm font-medium transition ${
-                      isActive ? 'bg-brand-50 text-brand-800' : 'text-ink/75 hover:bg-brand-50'
+                      isActive ? 'bg-blossom-100 text-blossom-700' : 'text-ink/75 hover:bg-blossom-50'
                     }`
                   }
                 >
@@ -154,7 +156,7 @@ function Footer() {
         </div>
 
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-white/50">Explore</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-blossom-300">Explore</h3>
           <ul className="mt-5 space-y-3 text-sm">
             {PUBLIC_NAV.map((item) => (
               <li key={item.to}>
@@ -167,7 +169,7 @@ function Footer() {
         </div>
 
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-white/50">Portal</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-blossom-300">Portal</h3>
           <ul className="mt-5 space-y-3 text-sm">
             <li>
               <Link to="/login" className="text-white/75 transition hover:text-brand-300">
@@ -188,7 +190,7 @@ function Footer() {
         </div>
 
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-white/50">Visit or call</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-blossom-300">Visit or call</h3>
           <ul className="mt-5 space-y-3 text-sm text-white/75">
             <li>{SCHOOL.address}</li>
             <li>

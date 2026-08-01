@@ -104,14 +104,14 @@ export function ProgrammesPage() {
             <Reveal
               key={pillar.title}
               delay={index * 90}
-              className="group flex flex-col rounded-3xl bg-cream p-8 ring-1 ring-brand-100 transition duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-brand-900/10"
+              className="group flex flex-col rounded-3xl bg-cream p-8 ring-1 ring-blossom-200 transition duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-blossom-500/15"
             >
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-brand-600 transition group-hover:bg-brand-600 group-hover:text-white">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-blossom-600 transition group-hover:bg-blossom-500 group-hover:text-white">
                 <Sprout className="h-6 w-6" />
               </span>
               <h3 className="mt-6 font-display text-2xl text-ink">{pillar.title}</h3>
               <p className="mt-3 flex-1 text-sm leading-relaxed text-ink/65">{pillar.body}</p>
-              <ul className="mt-6 space-y-2.5 border-t border-brand-100 pt-6 text-sm text-ink/70">
+              <ul className="mt-6 space-y-2.5 border-t border-blossom-200 pt-6 text-sm text-ink/70">
                 {pillar.points.map((point) => (
                   <li key={point} className="flex items-start gap-2.5">
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
@@ -135,10 +135,10 @@ export function ProgrammesPage() {
             <Reveal
               key={stage.name}
               delay={index * 70}
-              className="grid gap-6 rounded-3xl bg-white p-8 ring-1 ring-brand-100 transition duration-300 hover:shadow-lg hover:shadow-brand-900/10 lg:grid-cols-[minmax(0,16rem)_1fr_minmax(0,18rem)] lg:items-center"
+              className="grid gap-6 rounded-3xl bg-white p-8 ring-1 ring-blossom-100 transition duration-300 hover:shadow-lg hover:shadow-blossom-500/15 lg:grid-cols-[minmax(0,16rem)_1fr_minmax(0,18rem)] lg:items-center"
             >
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">{stage.ages}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blossom-600">{stage.ages}</p>
                 <h3 className="mt-2 font-display text-2xl text-ink">{stage.name}</h3>
               </div>
               <p className="text-sm leading-relaxed text-ink/65">{stage.body}</p>
@@ -169,9 +169,9 @@ export function ProgrammesPage() {
                   key={slot.time}
                   delay={index * 50}
                   as="li"
-                  className="flex gap-6 border-l border-brand-200 py-4 pl-6 first:pt-0"
+                  className="flex gap-6 border-l border-blossom-200 py-4 pl-6 first:pt-0"
                 >
-                  <span className="w-14 shrink-0 font-display text-lg text-brand-600">{slot.time}</span>
+                  <span className="w-14 shrink-0 font-display text-lg text-blossom-600">{slot.time}</span>
                   <span className="text-sm text-ink/75">{slot.label}</span>
                 </Reveal>
               ))}

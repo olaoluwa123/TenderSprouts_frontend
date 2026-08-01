@@ -60,7 +60,7 @@ export function EnquiryForm({ title = 'Send us an enquiry', subject = 'Website e
   }
 
   return (
-    <div className="rounded-3xl bg-white p-8 shadow-xl shadow-brand-900/5 ring-1 ring-brand-100 sm:p-10">
+    <div className="rounded-3xl bg-white p-8 shadow-xl shadow-blossom-500/10 ring-1 ring-blossom-200 sm:p-10">
       <h3 className="font-display text-2xl text-ink">{title}</h3>
       <p className="mt-2 text-sm text-ink/60">
         Tell us a little about your child and we will get back to you within one working day.

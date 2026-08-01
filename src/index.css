@@ -30,14 +30,18 @@
   --color-brand-800: #325820;
   --color-brand-900: #2a491e;
   --color-leaf: #2aa79b;
-  --color-blossom-50: #fff5f8;
-  --color-blossom-100: #ffe8ef;
-  --color-blossom-200: #ffd0dd;
-  --color-blossom-300: #f7a8bc;
-  --color-blossom: #e8709f;
+  --color-blossom-50: #fff1f5;
+  --color-blossom-100: #ffdde8;
+  --color-blossom-200: #ffbfd3;
+  --color-blossom-300: #fb96b5;
+  --color-blossom-400: #f4709a;
+  --color-blossom-500: #e8548a;
+  --color-blossom-600: #cf3b72;
+  --color-blossom-700: #a92c5b;
+  --color-blossom: #e8548a;
   --color-sun: #f2b13c;
   --color-ink: #16261c;
-  --color-cream: #fdf8f9;
+  --color-cream: #fdf2f5;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Fraunces", ui-serif, Georgia, serif;
@@ -121,7 +125,7 @@ html {
 
 /* Placeholder tiles stand in for real photography until the school supplies assets. */
 .photo-placeholder {
-  background-color: var(--color-blossom-50);
+  background-color: var(--color-blossom-100);
   background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.55) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0.55) 75%, transparent 75%, transparent);
   background-size: 22px 22px;
 }

@@ -59,7 +59,7 @@ function Steps() {
           <Reveal
             key={step.title}
             delay={index * 100}
-            className="flex flex-col rounded-3xl bg-cream p-8 ring-1 ring-brand-100"
+            className="flex flex-col rounded-3xl bg-cream p-8 ring-1 ring-blossom-200"
           >
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-brand-600 font-display text-lg text-white">
               {index + 1}
@@ -67,7 +67,7 @@ function Steps() {
             <h3 className="mt-6 font-display text-xl text-ink">{step.title}</h3>
             <p className="mt-3 flex-1 text-sm leading-relaxed text-ink/65">{step.body}</p>
             {step.documents ? (
-              <div className="mt-6 border-t border-brand-100 pt-6">
+              <div className="mt-6 border-t border-blossom-200 pt-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink/45">Documents needed</p>
                 <ul className="mt-3 space-y-2 text-sm text-ink/70">
                   {step.documents.map((doc) => (
@@ -91,12 +91,12 @@ function Faqs() {
     <Section tone="white">
       <div className="grid gap-14 lg:grid-cols-[1fr_1.3fr] lg:gap-20">
         <SectionHeading eyebrow="Questions" title="Answers to what parents ask us most" />
-        <div className="divide-y divide-brand-100 border-y border-brand-100">
+        <div className="divide-y divide-blossom-100 border-y border-blossom-200">
           {FAQS.map((faq, index) => (
             <Reveal key={faq.q} delay={index * 60} as="details" className="group py-5">
               <summary className="flex list-none items-center justify-between gap-6 font-display text-lg text-ink [&::-webkit-details-marker]:hidden">
                 {faq.q}
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700 transition group-open:rotate-45">
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blossom-100 text-blossom-700 transition group-open:rotate-45">
                   <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
                     <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                   </svg>
@@ -139,7 +139,7 @@ export function AdmissionsPage() {
               title="Ready to know more about our school?"
               description="Fill in the form and our admissions team will respond within one working day. Prefer to talk? Call or WhatsApp us during visiting hours."
             />
-            <Reveal delay={140} className="mt-10 space-y-4 rounded-3xl bg-white p-8 ring-1 ring-brand-100">
+            <Reveal delay={140} className="mt-10 space-y-4 rounded-3xl bg-white p-8 ring-1 ring-blossom-200">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink/45">Call / WhatsApp</p>
                 <a href={SCHOOL.phoneHref} className="mt-1 block font-display text-xl text-ink hover:text-brand-700">
