@@ -11,7 +11,7 @@ const initialValues = {
 }
 
 const fieldClass =
-  'w-full rounded-xl border border-brand-100 bg-white px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-brand-400 focus:ring-2 focus:ring-brand-200'
+  'w-full rounded-xl border border-blossom-100 bg-white px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink/35 focus:border-blossom-300 focus:ring-2 focus:ring-blossom-100'
 
 function Field({ label, name, type = 'text', required, value, onChange, placeholder, className = '' }) {
   return (

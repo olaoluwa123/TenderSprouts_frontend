@@ -55,7 +55,7 @@ export function Reveal({ as: Tag = 'div', delay = 0, className = '', children, .
 
 export function Eyebrow({ tone = 'brand', children }) {
   const tones = {
-    brand: 'bg-brand-100 text-brand-800',
+    brand: 'bg-blossom-50 text-brand-800 ring-1 ring-blossom-100',
     light: 'bg-white/10 text-brand-200 ring-1 ring-white/15',
   }
   return (
@@ -101,7 +101,7 @@ const buttonBase =
 const buttonVariants = {
   primary: 'bg-brand-600 text-white shadow-lg shadow-brand-600/25 hover:bg-brand-700 hover:-translate-y-0.5',
   secondary: 'bg-ink text-white hover:bg-ink/85 hover:-translate-y-0.5',
-  outline: 'border border-brand-200 bg-white text-brand-800 hover:border-brand-400 hover:bg-brand-50',
+  outline: 'border border-blossom-200 bg-white text-brand-800 hover:border-blossom-300 hover:bg-blossom-50',
   ghostLight: 'border border-white/25 text-white hover:bg-white/10',
 }
 
@@ -133,7 +133,7 @@ export function ActionLink({ to, href, variant = 'primary', size = 'md', classNa
 export function PhotoPlaceholder({ label, ratio = 'aspect-[4/3]', className = '', children }) {
   return (
     <div
-      className={`photo-placeholder relative overflow-hidden rounded-3xl ring-1 ring-brand-200/70 ${ratio} ${className}`}
+      className={`photo-placeholder relative overflow-hidden rounded-3xl ring-1 ring-blossom-100/80 ${ratio} ${className}`}
     >
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
         <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8 text-brand-600/60" aria-hidden="true">
@@ -151,7 +151,8 @@ export function PhotoPlaceholder({ label, ratio = 'aspect-[4/3]', className = ''
 export function PageHero({ eyebrow, title, description, children }) {
   return (
     <div className="relative overflow-hidden bg-cream">
-      <div className="pointer-events-none absolute -right-32 -top-40 h-[26rem] w-[26rem] rounded-full bg-brand-200/40 blur-3xl" />
+      <div className="pointer-events-none absolute -right-32 -top-40 h-[26rem] w-[26rem] rounded-full bg-brand-200/35 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-blossom-200/45 blur-3xl" />
       <Container className="relative py-16 sm:py-24">
         <Reveal>
           <Eyebrow>{eyebrow}</Eyebrow>

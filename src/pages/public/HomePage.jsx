@@ -73,8 +73,9 @@ const PORTAL_FEATURES = [
 function Hero() {
   return (
     <div className="relative overflow-hidden bg-cream">
-      <div className="pointer-events-none absolute -right-40 -top-40 h-[34rem] w-[34rem] rounded-full bg-brand-200/40 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-52 -left-32 h-[28rem] w-[28rem] rounded-full bg-leaf/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-40 -top-40 h-[34rem] w-[34rem] rounded-full bg-brand-200/35 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-52 -left-32 h-[28rem] w-[28rem] rounded-full bg-blossom-200/50 blur-3xl" />
+      <div className="pointer-events-none absolute left-1/2 top-24 h-64 w-64 -translate-x-1/2 rounded-full bg-blossom-100/60 blur-3xl" />
 
       <Container className="relative grid items-center gap-16 py-20 lg:grid-cols-[1.05fr_1fr] lg:py-28">
         <div>
@@ -122,18 +123,18 @@ function Hero() {
 
         <Reveal delay={180} className="relative">
           <PhotoPlaceholder label="Hero photo — pupils at play" ratio="aspect-[4/5]" className="shadow-2xl shadow-brand-900/10" />
-          <div className="absolute -bottom-6 -left-6 hidden w-56 rounded-2xl bg-white p-5 shadow-xl shadow-brand-900/10 ring-1 ring-brand-100 sm:block">
+          <div className="absolute -bottom-6 -left-6 hidden w-56 rounded-2xl bg-white p-5 shadow-xl shadow-brand-900/10 ring-1 ring-blossom-100 sm:block">
             <p className="font-display text-3xl text-brand-600">1:8</p>
             <p className="mt-1 text-sm text-ink/60">Teacher to pupil ratio, so no child is overlooked.</p>
           </div>
           <div className="absolute -right-4 top-10 hidden rounded-2xl bg-ink px-5 py-4 text-white shadow-xl sm:block">
-            <p className="text-xs uppercase tracking-[0.16em] text-brand-300">Now enrolling</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-blossom-300">Now enrolling</p>
             <p className="mt-1 font-display text-lg">2026/2027 session</p>
           </div>
         </Reveal>
       </Container>
 
-      <div className="relative border-t border-brand-100 bg-white/70">
+      <div className="relative border-t border-blossom-100 bg-white/70">
         <Container className="grid grid-cols-2 gap-8 py-10 lg:grid-cols-4">
           {STATS.map((stat, index) => (
             <Reveal key={stat.label} delay={index * 70}>
@@ -324,8 +325,10 @@ function PortalBand() {
 function AdmissionsCta() {
   return (
     <Section tone="cream">
-      <Reveal className="overflow-hidden rounded-[2rem] bg-brand-600 px-8 py-14 text-white sm:px-14 sm:py-20">
-        <div className="grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-center">
+      <Reveal className="relative overflow-hidden rounded-[2rem] bg-brand-600 px-8 py-14 text-white sm:px-14 sm:py-20">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-blossom-200/30 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-10 h-48 w-48 rounded-full bg-blossom/25 blur-3xl" />
+        <div className="relative grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-center">
           <div>
             <h2 className="font-display text-3xl leading-tight sm:text-4xl">
               Join the Tender Sprouts family — a journey of learning, growth and values awaits your child.

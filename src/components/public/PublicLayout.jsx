@@ -53,7 +53,7 @@ function Header() {
       <TopBar />
       <div
         className={`border-b bg-white/90 backdrop-blur transition ${
-          scrolled ? 'border-brand-100 shadow-sm' : 'border-transparent'
+          scrolled ? 'border-blossom-100 shadow-sm shadow-blossom-100/40' : 'border-transparent'
         }`}
       >
         <Container className="flex h-20 items-center justify-between gap-6">
@@ -69,7 +69,7 @@ function Header() {
                 end={item.to === '/'}
                 className={({ isActive }) =>
                   `rounded-full px-4 py-2 text-sm font-medium transition ${
-                    isActive ? 'bg-brand-50 text-brand-800' : 'text-ink/70 hover:bg-brand-50/70 hover:text-brand-800'
+                    isActive ? 'bg-blossom-50 text-brand-800' : 'text-ink/70 hover:bg-blossom-50/80 hover:text-brand-800'
                   }`
                 }
               >
