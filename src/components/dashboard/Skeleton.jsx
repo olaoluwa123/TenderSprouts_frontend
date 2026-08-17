@@ -6,24 +6,24 @@ export function Skeleton({ className, style }) {
 
 export function DashboardSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-2">
           <Skeleton className="h-8 w-56" />
-          <Skeleton className="h-4 w-72" />
+          <Skeleton className="h-4 w-48" />
         </div>
-        <Skeleton className="h-9 w-40" />
+        <Skeleton className="h-8 w-32" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-28 w-full rounded-xl" />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Skeleton key={i} className="h-28 w-full rounded-2xl" />
         ))}
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Skeleton className="h-72 w-full rounded-xl" />
-        <Skeleton className="h-72 w-full rounded-xl" />
+      <div className="grid gap-5 lg:grid-cols-2">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Skeleton key={i} className="h-56 w-full rounded-2xl" />
+        ))}
       </div>
-      <Skeleton className="h-64 w-full rounded-xl" />
     </div>
   )
 }

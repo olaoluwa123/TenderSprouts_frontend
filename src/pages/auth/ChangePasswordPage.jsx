@@ -45,7 +45,7 @@ export function ChangePasswordPage() {
 
   if (done) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-cream to-blossom-50 p-4">
         <Card className="w-full max-w-md">
           <Alert tone="success">Password updated successfully.</Alert>
           <Button className="mt-4 w-full" onClick={() => window.location.assign(homePathForRole(role))}>
@@ -57,9 +57,9 @@ export function ChangePasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-cream to-blossom-50 p-4">
       <Card className="w-full max-w-md">
-        <h1 className="text-xl font-bold">Change your password</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight text-ink">Change your password</h1>
         <p className="mt-2 text-sm text-muted">
           You must set a new password before continuing.
         </p>

@@ -274,7 +274,7 @@ export function GradesPage() {
           No class is assigned yet. {isTeacher ? 'Ask an admin to assign you to a class.' : 'Create a class first.'}
         </Alert>
       )}
-      {!classId && classes.length > 0 && <Alert tone="info">Select your class to see students.</Alert>}
+      {!classId && classes.length > 1 && <Alert tone="info">Select your class to see students.</Alert>}
       {studentsError && <div className="mb-4"><Alert>{studentsError}</Alert></div>}
       {classId && studentsLoading && <Loading />}
       {classId && !studentsLoading && (students ?? []).length > 0 && (

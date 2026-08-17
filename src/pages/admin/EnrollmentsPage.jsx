@@ -74,7 +74,7 @@ export function EnrollmentsPage() {
 
   return (
     <div>
-      <PageHeader title="Bulk Promote" subtitle="Move students to the next class and session" />
+      <PageHeader title="Promote pupils" subtitle="Move pupils to the next class and academic session" />
       <Card className="max-w-xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <Alert>{error}</Alert>}

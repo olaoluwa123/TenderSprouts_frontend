@@ -24,9 +24,9 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-cream to-blossom-50 p-4">
       <Card className="w-full max-w-md">
-        <h1 className="text-xl font-bold">Forgot password</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight text-ink">Forgot password</h1>
         <p className="mt-1 text-sm text-muted">We'll email you a reset link if the account exists.</p>
         {sent ? (
           <div className="mt-4"><Alert tone="success">If an account exists, a reset email has been sent.</Alert></div>
@@ -39,7 +39,7 @@ export function ForgotPasswordPage() {
             <Button type="submit" disabled={loading}>{loading ? 'Sending...' : 'Send reset link'}</Button>
           </form>
         )}
-        <p className="mt-4 text-sm"><Link to="/login" className="text-primary-600">Back to login</Link></p>
+        <p className="mt-4 text-sm"><Link to="/login" className="font-medium text-brand-700 hover:text-brand-700">Back to login</Link></p>
       </Card>
     </div>
   )

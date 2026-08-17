@@ -1,5 +1,10 @@
 import { api } from './client'
 
+export const admissionEnquiriesApi = {
+  create: (payload) => api.post('/admission-enquiries', payload, undefined, false),
+  list: () => api.get('/admission-enquiries'),
+}
+
 // Auth
 export const authApi = {
   login: (email, password) =>
@@ -22,6 +27,9 @@ export const usersApi = {
   get: (id) => api.get(`/users/${id}`),
   updateStatus: (id, isActive) =>
     api.patch(`/users/${id}/status`, { isActive }),
+  updateRole: (id, role) =>
+    api.patch(`/users/${id}/role`, { role }),
+  activity: (id) => api.get(`/users/${id}/activity`),
   forcePasswordReset: (id) =>
     api.post(`/users/${id}/force-password-reset`),
 }
@@ -30,6 +38,7 @@ export const usersApi = {
 export const studentsApi = {
   list: (params) => api.get('/students', params),
   get: (id) => api.get(`/students/${id}`),
+  profile: (id) => api.get(`/students/${id}/profile`),
   create: (data) => api.post('/students', data),
   onboard: (data) => api.post('/students/onboard', data),
   importCsv: (file) => {
@@ -61,25 +70,38 @@ export const enrollmentsApi = {
 // Dashboards
 export const dashboardApi = {
   admin: () => api.get('/dashboard/admin'),
+  activity: (limit = 50) => api.get('/dashboard/activity', { limit }),
   teacher: () => api.get('/dashboard/teacher'),
 }
 
 // Parents
 export const parentsApi = {
   me: () => api.get('/parents/me'),
+  updateMe: (data) => api.patch('/parents/me', data),
   dashboard: (studentId) => api.get('/parents/me/dashboard', { studentId }),
   list: (params) => api.get('/parents', params),
   get: (id) => api.get(`/parents/${id}`),
   create: (data) => api.post('/parents', data),
   linkStudent: (id, studentId) =>
     api.post(`/parents/${id}/students`, { studentId }),
+  createAndLinkStudent: (id, data) =>
+    api.post(`/parents/${id}/students/create`, data),
   unlinkStudent: (id, studentId) =>
     api.delete(`/parents/${id}/students/${studentId}`),
 }
 
 // Teachers
 export const teachersApi = {
+  list: (params) => api.get('/teachers', params),
+  get: (id) => api.get(`/teachers/${id}`),
+  profile: (id) => api.get(`/teachers/${id}/profile`),
+  update: (id, data) => api.patch(`/teachers/${id}`, data),
   onboard: (data) => api.post('/teachers/onboard', data),
+  importCsv: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/teachers/import-csv', formData)
+  },
   classes: (teacherId) => api.get(`/teachers/${teacherId}/classes`),
   assignClass: (teacherId, classId) =>
     api.post(`/teachers/${teacherId}/classes`, undefined, { classId }),
@@ -87,6 +109,18 @@ export const teachersApi = {
     api.post(`/teachers/${teacherId}/classes/reassign`, undefined, { classId }),
   unassignClass: (teacherId) =>
     api.post(`/teachers/${teacherId}/classes/unassign`),
+  listSubjects: (teacherId) => api.get(`/teachers/${teacherId}/subjects`),
+  assignSubject: (teacherId, classId, subjectId) =>
+    api.post(`/teachers/${teacherId}/subjects`, undefined, { classId, subjectId }),
+  unassignSubject: (teacherId, classId, subjectId) =>
+    api.delete(`/teachers/${teacherId}/subjects`, { classId, subjectId }),
+  timetable: (teacherId) => api.get(`/teachers/${teacherId}/timetable`),
+  createTimetableSlot: (teacherId, data) =>
+    api.post(`/teachers/${teacherId}/timetable`, data),
+  updateTimetableSlot: (teacherId, slotId, data) =>
+    api.put(`/teachers/${teacherId}/timetable/${slotId}`, data),
+  deleteTimetableSlot: (teacherId, slotId) =>
+    api.delete(`/teachers/${teacherId}/timetable/${slotId}`),
 }
 
 // Sessions
@@ -103,10 +137,13 @@ export const sessionsApi = {
 // Classes
 export const classesApi = {
   list: (params) => api.get('/classes', params),
+  get: (id, params) => api.get(`/classes/${id}`, params),
   create: (name) => api.post('/classes', { name }),
   subjects: (classId) => api.get(`/classes/${classId}/subjects`),
   assignSubject: (classId, subjectId) =>
     api.post(`/classes/${classId}/subjects`, { subjectId }),
+  unassignSubject: (classId, subjectId) =>
+    api.delete(`/classes/${classId}/subjects/${subjectId}`),
   bulkAssignSubjects: (classIds, subjectIds) =>
     api.post('/classes/subjects/bulk-assign', { classIds, subjectIds }),
   grades: (classId, termId, subjectId) =>
@@ -126,7 +163,10 @@ export const classesApi = {
 // Subjects
 export const subjectsApi = {
   list: (params) => api.get('/subjects', params),
+  get: (id) => api.get(`/subjects/${id}`),
   create: (name) => api.post('/subjects', { name }),
+  update: (id, data) => api.patch(`/subjects/${id}`, data),
+  remove: (id) => api.delete(`/subjects/${id}`),
 }
 
 // Grades
@@ -166,4 +206,79 @@ export const assessmentTypesApi = {
   list: () => api.get('/assessment-types'),
   create: (data) => api.post('/assessment-types', data),
   update: (id, data) => api.put(`/assessment-types/${id}`, data),
+}
+
+// Calendar
+export const calendarApi = {
+  list: ({ from, to } = {}) => api.get('/calendar/events', { from, to }),
+  get: (id) => api.get(`/calendar/events/${id}`),
+  create: (data) => api.post('/calendar/events', data),
+  update: (id, data) => api.put(`/calendar/events/${id}`, data),
+  remove: (id) => api.delete(`/calendar/events/${id}`),
+}
+
+// Announcements
+export const announcementsApi = {
+  list: (params) => api.get('/announcements', params),
+  get: (id) => api.get(`/announcements/${id}`),
+  create: (data) => api.post('/announcements', data),
+  update: (id, data) => api.patch(`/announcements/${id}`, data),
+  remove: (id) => api.delete(`/announcements/${id}`),
+  inbox: () => api.get('/announcements/inbox'),
+  mine: () => api.get('/announcements/mine'),
+}
+
+// Attendance
+export const attendanceApi = {
+  daily: (date) => api.get('/attendance/daily', { date }),
+  byClass: (classId, date) => api.get('/attendance/class', { classId, date }),
+  byPupil: (studentId, from, to) =>
+    api.get('/attendance/pupil', { studentId, from, to }),
+  absences: ({ from, to, classId } = {}) =>
+    api.get('/attendance/absences', { from, to, classId }),
+  markClass: ({ classId, date, marks }) =>
+    api.post('/attendance/class/mark', { classId, date, marks }),
+  staff: (date) => api.get('/attendance/staff', { date }),
+  staffByTeacher: (teacherId, from, to) =>
+    api.get('/attendance/staff/teacher', { teacherId, from, to }),
+  markStaff: ({ date, marks }) =>
+    api.post('/attendance/staff/mark', { date, marks }),
+}
+
+// Fees
+export const feesApi = {
+  schoolTemplate: () => api.get('/fees/templates/school'),
+  saveSchoolTemplate: (data) => api.put('/fees/templates/school', data),
+  template: (classId) => api.get(`/fees/templates/${classId}`),
+  saveTemplate: (classId, data) => api.put(`/fees/templates/${classId}`, data),
+  structures: (classId, termId) =>
+    api.get('/fees/structures', { classId, termId }),
+  ensureFromTemplate: (classId, termId) =>
+    api.post('/fees/structures/ensure-from-template', undefined, { classId, termId }),
+  batchAmounts: (items) => api.put('/fees/structures/batch-amounts', { items }),
+  createStructure: (data) => api.post('/fees/structures', data),
+  updateStructure: (id, data) => api.patch(`/fees/structures/${id}`, data),
+  removeStructure: (id) => api.delete(`/fees/structures/${id}`),
+  publish: (classId, termId) =>
+    api.post('/fees/structures/publish', undefined, { classId, termId }),
+  republishPreview: (classId, termId) =>
+    api.get('/fees/republish-preview', { classId, termId }),
+  republish: (classId, termId) =>
+    api.post('/fees/structures/republish', undefined, { classId, termId }),
+  invoices: (classId, termId) =>
+    api.get('/fees/invoices', { classId, termId }),
+  markPaid: (id) => api.post(`/fees/invoices/${id}/mark-paid`),
+  my: () => api.get('/fees/my'),
+  generateForStudent: (studentId) =>
+    api.post(`/fees/students/${studentId}/generate`),
+  initializePayment: () => api.post('/fees/payments/initialize'),
+  verifyPayment: (reference) =>
+    api.post('/fees/payments/verify', { reference }),
+}
+
+// Reports
+export const reportsApi = {
+  preview: (key, params) => api.get(`/reports/${key}`, params),
+  export: (key, format, params) =>
+    api.getBlob(`/reports/${key}/export`, { ...params, format }),
 }

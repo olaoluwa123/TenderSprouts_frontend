@@ -34,16 +34,16 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-cream to-blossom-50 p-4">
         <Card className="max-w-md"><Alert>Invalid reset link.</Alert></Card>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-cream to-blossom-50 p-4">
       <Card className="w-full max-w-md">
-        <h1 className="text-xl font-bold">Reset password</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight text-ink">Reset password</h1>
         {done ? (
           <div className="mt-4"><Alert tone="success">Password updated. Redirecting to login...</Alert></div>
         ) : (
@@ -58,7 +58,7 @@ export function ResetPasswordPage() {
             <Button type="submit">Update password</Button>
           </form>
         )}
-        <p className="mt-4 text-sm"><Link to="/login" className="text-primary-600">Back to login</Link></p>
+        <p className="mt-4 text-sm"><Link to="/login" className="font-medium text-brand-700 hover:text-brand-700">Back to login</Link></p>
       </Card>
     </div>
   )

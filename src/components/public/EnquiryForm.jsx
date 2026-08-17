@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { SCHOOL } from '@/lib/school'
+import { admissionEnquiriesApi } from '@/api'
 
 const initialValues = {
   firstName: '',
@@ -33,30 +33,37 @@ function Field({ label, name, type = 'text', required, value, onChange, placehol
   )
 }
 
-export function EnquiryForm({ title = 'Send us an enquiry', subject = 'Website enquiry' }) {
+export function EnquiryForm({ title = 'Send us an enquiry' }) {
   const [values, setValues] = useState(initialValues)
   const [sent, setSent] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
 
   const update = (event) => {
     const { name, value } = event.target
     setValues((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    const body = [
-      `Name: ${values.firstName} ${values.surname}`.trim(),
-      `Email: ${values.email}`,
-      values.phone ? `Phone: ${values.phone}` : null,
-      values.childAge ? `Child's age / class of interest: ${values.childAge}` : null,
-      '',
-      values.message,
-    ]
-      .filter(Boolean)
-      .join('\n')
-
-    window.location.href = `${SCHOOL.emailHref}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    setSent(true)
+    setSubmitting(true)
+    setError(null)
+    try {
+      await admissionEnquiriesApi.create({
+        firstName: values.firstName,
+        surname: values.surname,
+        email: values.email,
+        phone: values.phone,
+        childAgeOrClass: values.childAge,
+        message: values.message,
+      })
+      setSent(true)
+      setValues(initialValues)
+    } catch (err) {
+      setError(err?.message || 'Your enquiry could not be sent. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -105,18 +112,18 @@ export function EnquiryForm({ title = 'Send us an enquiry', subject = 'Website e
         <div className="sm:col-span-2">
           <button
             type="submit"
+            disabled={submitting}
             className="w-full rounded-full bg-brand-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition hover:-translate-y-0.5 hover:bg-brand-700 sm:w-auto"
           >
-            Send message
+            {submitting ? 'Sending…' : 'Send message'}
           </button>
           {sent ? (
             <p className="mt-4 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800">
-              Your email app should now be open with the enquiry ready to send. If nothing happened, email us directly at{' '}
-              <a href={SCHOOL.emailHref} className="font-semibold underline">
-                {SCHOOL.email}
-              </a>
-              .
+              Thank you. Your admission enquiry has been sent to the school administration.
             </p>
+          ) : null}
+          {error ? (
+            <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
           ) : null}
         </div>
       </form>

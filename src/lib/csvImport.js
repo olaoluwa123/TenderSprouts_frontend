@@ -96,3 +96,59 @@ function previewRowStatus(row, previousRows) {
   }
   return 'Ready'
 }
+
+export const TEACHER_CSV_HEADERS = ['email', 'full_name', 'phone', 'class']
+
+const TEACHER_REQUIRED_HEADERS = ['email', 'full_name']
+
+const EMAIL_PATTERN = /^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
+
+export function parseTeacherCsv(text) {
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.trim())
+  if (lines.length === 0) {
+    throw new Error('CSV file is empty')
+  }
+
+  const headers = parseCsvLine(lines[0]).map((h) => h.trim().toLowerCase())
+  for (const required of TEACHER_REQUIRED_HEADERS) {
+    if (!headers.includes(required)) {
+      throw new Error(`Missing required column: ${required}`)
+    }
+  }
+
+  const rows = []
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCsvLine(lines[i])
+    const row = {}
+    headers.forEach((header, index) => {
+      row[header] = values[index]?.trim() ?? ''
+    })
+    const rowNumber = i + 1
+    rows.push({
+      rowNumber,
+      email: row.email || '—',
+      fullName: row.full_name || '—',
+      phone: row.phone || '—',
+      className: row.class || '—',
+      previewStatus: previewTeacherRowStatus(row, rows),
+      raw: row,
+    })
+  }
+  return rows
+}
+
+function previewTeacherRowStatus(row, previousRows) {
+  for (const required of TEACHER_REQUIRED_HEADERS) {
+    if (!row[required]?.trim()) {
+      return `Missing ${required}`
+    }
+  }
+  if (!EMAIL_PATTERN.test(row.email.trim())) {
+    return 'Invalid email'
+  }
+  const email = row.email.trim().toLowerCase()
+  if (previousRows.some((r) => r.raw.email.trim().toLowerCase() === email)) {
+    return 'Duplicate email in file'
+  }
+  return 'Ready'
+}

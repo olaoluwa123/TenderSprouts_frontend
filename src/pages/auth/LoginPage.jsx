@@ -39,12 +39,12 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-brand-50 via-blossom-50 to-white p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-brand-50 via-cream to-blossom-50 p-4">
       <Card className="w-full max-w-md">
         <div className="mb-6">
-          <img src={SCHOOL.logo} alt={SCHOOL.name} className="h-12 w-auto" />
-          <h1 className="mt-5 text-xl font-bold">{SCHOOL.name} portal</h1>
-          <p className="text-sm text-muted">Sign in to your account</p>
+          <img src={SCHOOL.logo} alt={SCHOOL.name} className="h-20 w-auto" />
+          <h1 className="mt-5 font-display text-2xl font-semibold tracking-tight text-ink">{SCHOOL.name} portal</h1>
+          <p className="mt-1 text-sm text-muted">Sign in to your account</p>
         </div>
         {error && <Alert>{error}</Alert>}
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
@@ -59,10 +59,10 @@ export function LoginPage() {
           </Button>
         </form>
         <p className="mt-4 text-center text-sm text-muted">
-          <Link to="/forgot-password" className="text-primary-600 hover:underline">Forgot password?</Link>
+          <Link to="/forgot-password" className="font-medium text-brand-700 hover:text-blossom-700">Forgot password?</Link>
         </p>
       </Card>
-      <Link to="/" className="mt-6 inline-flex items-center gap-2 text-sm text-muted hover:text-brand-700">
+      <Link to="/" className="mt-6 inline-flex items-center gap-2 text-sm text-muted transition hover:text-brand-700">
         <ArrowLeft size={16} />
         Back to {SCHOOL.shortName}
       </Link>

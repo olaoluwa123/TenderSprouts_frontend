@@ -1,50 +1,64 @@
 import { Link } from 'react-router-dom'
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-import {
-  BookOpen,
-  Calendar,
-  ClipboardList,
-  GraduationCap,
-  TrendingDown,
-  TrendingUp,
-} from 'lucide-react'
-import { dashboardApi } from '@/api'
-import {
-  ChartCard,
-  DashboardSkeleton,
-  KpiCard,
-  ProgressBar,
-  StatusPill,
-} from '@/components/dashboard'
-import { Alert, Button, PageHeader, Table, Td, Th } from '@/components/ui'
+import { announcementsApi, attendanceApi, dashboardApi, teachersApi } from '@/api'
+import { useAuth } from '@/hooks/useAuth'
+import { DashboardSkeleton } from '@/components/dashboard'
+import { Alert, Button, PageHeader } from '@/components/ui'
 import { useAsync } from '@/hooks/useAsync'
 
-const GRADE_COLORS = {
-  A: '#10b981',
-  B: '#0ea5e9',
-  C: '#4f46e5',
-  D: '#f59e0b',
-  E: '#f97316',
-  F: '#ef4444',
+const WEEKDAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
+
+function todayIso() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function formatTime(value) {
+  if (!value) return '—'
+  const text = String(value).slice(0, 5)
+  return text
+}
+
+function StatCard({ label, value, to }) {
+  const body = (
+    <div className="rounded-2xl border border-blossom-200/80 bg-white p-4 shadow-sm shadow-blossom-500/5 transition hover:border-brand-200">
+      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted">{label}</p>
+      <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-ink">{value ?? 0}</p>
+    </div>
+  )
+  return to ? <Link to={to}>{body}</Link> : body
 }
 
 export function TeacherDashboard() {
+  const { user } = useAuth()
+  const teacherId = user?.profileId
+  const today = todayIso()
+
   const { data, loading, error, reload } = useAsync(() => dashboardApi.teacher(), [])
+  const { data: assignments } = useAsync(
+    () => (teacherId ? teachersApi.classes(teacherId).catch(() => []) : Promise.resolve([])),
+    [teacherId],
+  )
+  const { data: subjects } = useAsync(
+    () => (teacherId ? teachersApi.listSubjects(teacherId).catch(() => []) : Promise.resolve([])),
+    [teacherId],
+  )
+  const { data: timetable } = useAsync(
+    () => (teacherId ? teachersApi.timetable(teacherId).catch(() => []) : Promise.resolve([])),
+    [teacherId],
+  )
+  const classId = data?.classId
+  const { data: attendanceRows } = useAsync(
+    () => (classId ? attendanceApi.byClass(classId, today).catch(() => []) : Promise.resolve([])),
+    [classId, today],
+  )
+  const { data: inbox } = useAsync(() => announcementsApi.inbox().catch(() => []), [])
 
   if (loading) return <DashboardSkeleton />
   if (error) {
     return (
       <div>
-        <PageHeader title="Teaching Dashboard" />
+        <PageHeader title="Dashboard" />
         <Alert>{error}</Alert>
         <Button className="mt-3" variant="secondary" onClick={reload}>Retry</Button>
       </div>
@@ -52,221 +66,150 @@ export function TeacherDashboard() {
   }
 
   const progress = data?.gradingProgress ?? {}
-  const distribution = data?.gradeDistribution ?? []
-  const top = data?.topPerformers ?? []
-  const bottom = data?.bottomPerformers ?? []
-  const exams = data?.upcomingExams ?? []
-  const hasClass = data?.classId != null
+  const pupilCount = data?.studentCount ?? 0
+  const subjectCount = (subjects ?? []).length || progress.subjectCount || 0
+  const classList = (assignments ?? []).length
+    ? assignments
+    : (data?.classId
+      ? [{ classId: data.classId, className: data.className, isActive: true }]
+      : [])
+  const todayName = WEEKDAYS[new Date().getDay()]
+  const todaySlots = (Array.isArray(timetable) ? timetable : [])
+    .filter((slot) => slot.dayOfWeek === todayName)
+    .slice()
+    .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')))
+
+  const sheet = Array.isArray(attendanceRows)
+    ? attendanceRows
+    : (attendanceRows?.pupils ?? [])
+  const present = sheet.filter((r) => r.status === 'PRESENT').length
+  const absent = sheet.filter((r) => r.status === 'ABSENT').length
+  const late = sheet.filter((r) => r.status === 'LATE').length
+  const excused = sheet.filter((r) => r.status === 'EXCUSED').length
+
+  const announcements = Array.isArray(inbox) ? inbox : (inbox?.content ?? [])
+  const recent = [
+    ...announcements.slice(0, 2).map((a) => ({
+      id: `a-${a.id}`,
+      text: a.title || 'Announcement',
+      meta: 'Announcement',
+    })),
+    ...(data?.upcomingExams ?? []).slice(0, 2).map((e) => ({
+      id: `e-${e.id}`,
+      text: `${e.subjectName} exam`,
+      meta: e.examDate,
+    })),
+  ].slice(0, 5)
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Teaching Dashboard"
-        subtitle={hasClass
-          ? `${data.className} · ${data.sessionName} · ${data.termName}`
-          : `${data?.sessionName ?? '—'} · ${data?.termName ?? '—'}`}
-        actions={(
-          <div className="flex flex-wrap gap-2">
-            <Link to="/teacher/grades">
-              <Button variant="secondary">Enter grades</Button>
-            </Link>
-            <Link to="/teacher/term-results">
-              <Button>Term results</Button>
-            </Link>
-          </div>
-        )}
-      />
-
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm shadow-sm">
-        <span className="inline-flex items-center gap-2 font-medium text-slate-800">
-          <GraduationCap size={16} className="text-primary-600" />
-          {hasClass ? data.className : 'No class assigned'}
-        </span>
-        <span className="text-border">|</span>
-        <span className="text-muted">{data?.studentCount ?? 0} students</span>
-        <span className="text-border">|</span>
-        <span className="text-muted">Term: {data?.termName ?? '—'}</span>
-        <span className="text-border">|</span>
-        <StatusPill status={data?.submissionStatus} />
-      </div>
-
-      {!hasClass && (
-        <Alert tone="info">{progress.nextAction || 'Ask an admin to assign you to a class'}</Alert>
+      {data?.termName && (
+        <p className="text-xs text-muted">
+          {data.sessionName} · {data.termName}
+          {data.className ? ` · ${data.className}` : ''}
+        </p>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          label="Students"
-          value={data?.studentCount ?? 0}
-          hint="Active enrolments in your class"
-          icon={<GraduationCap size={18} />}
-        />
-        <KpiCard
-          label="Subjects"
-          value={progress.subjectCount ?? 0}
-          hint="Assigned to this class"
-          icon={<BookOpen size={18} />}
-          tone="info"
-        />
-        <KpiCard
-          label="Class average"
-          value={data?.classAverage != null ? Number(data.classAverage).toFixed(1) : '—'}
-          hint="From computed term results"
-          icon={<TrendingUp size={18} />}
-          tone="success"
-        />
-        <KpiCard
-          label="Submission"
-          value={formatStatus(data?.submissionStatus)}
-          hint={progress.nextAction}
-          icon={<ClipboardList size={18} />}
-          tone="warning"
-        />
+      {!data?.classId && classList.length === 0 && (
+        <Alert tone="info">Ask an admin to assign you to a class to unlock attendance and grading.</Alert>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StatCard label="Pupils" value={pupilCount} to="/teacher/pupils" />
+        <StatCard label="Subjects" value={subjectCount} to="/teacher/subjects" />
       </div>
 
-      {hasClass && (
-        <>
-          <div className="rounded-xl border border-border bg-white p-5 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold text-slate-900">Grading progress</h3>
-            <ProgressBar
-              label={`${progress.studentsWithGrades ?? 0} of ${progress.enrolledStudents ?? 0} students have scores`}
-              value={progress.studentsWithGrades ?? 0}
-              max={progress.enrolledStudents || 1}
-              hint={progress.nextAction}
-            />
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link to="/teacher/grades">
-                <Button size="sm" variant="secondary">Continue grading</Button>
-              </Link>
-              <Link to="/teacher/term-results">
-                <Button size="sm">Compute / submit</Button>
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid gap-4 xl:grid-cols-2">
-            <ChartCard
-              title="Grade distribution"
-              subtitle="Based on computed class averages"
-              empty={distribution.every((b) => !b.count)}
-              emptyMessage="Compute term results to see the distribution"
-            >
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={distribution} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="letter" tick={{ fontSize: 12 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Bar dataKey="count" radius={[6, 6, 0, 0]}>
-                      {distribution.map((bucket) => (
-                        <Cell key={bucket.letter} fill={GRADE_COLORS[bucket.letter] || '#4f46e5'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </ChartCard>
-
-            <ChartCard title="Performance snapshot" subtitle="Top and bottom performers this term">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <PerformerList
-                  title="Top performers"
-                  icon={<TrendingUp size={14} className="text-emerald-600" />}
-                  items={top}
-                  empty="No computed results yet"
-                />
-                <PerformerList
-                  title="Needs attention"
-                  icon={<TrendingDown size={14} className="text-amber-600" />}
-                  items={bottom}
-                  empty="No computed results yet"
-                />
-              </div>
-            </ChartCard>
-          </div>
-
-          <div className="rounded-xl border border-border bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Calendar size={16} className="text-primary-600" />
+      <section className="rounded-2xl border border-blossom-200/80 bg-white p-5 shadow-sm shadow-blossom-500/5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold tracking-tight text-ink">Today&apos;s timetable</h2>
+          <Link to="/teacher/timetable" className="text-xs font-medium text-brand-700 hover:text-brand-700">
+            Edit timetable
+          </Link>
+        </div>
+        {todaySlots.length === 0 ? (
+          <p className="py-6 text-sm text-muted">
+            {classList.length === 0
+              ? 'No class assigned yet.'
+              : 'No periods set for today. Add your weekly timetable to see today’s classes here.'}
+          </p>
+        ) : (
+          <ul className="divide-y divide-blossom-100">
+            {todaySlots.map((slot) => (
+              <li
+                key={slot.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0"
+              >
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Upcoming exams</h3>
-                  <p className="text-xs text-muted">From the class exam timetable</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                    {formatTime(slot.startTime)} – {formatTime(slot.endTime)}
+                    {slot.room ? ` · ${slot.room}` : ''}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-ink">
+                    {slot.subjectName || 'Class session'}
+                    {' — '}
+                    {slot.className || `Class #${slot.classId}`}
+                  </p>
                 </div>
-              </div>
-              <Link to="/teacher/exam-timetable">
-                <Button size="sm" variant="secondary">Manage timetable</Button>
-              </Link>
-            </div>
-            {exams.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border bg-slate-50 px-4 py-8 text-center text-sm text-muted">
-                No upcoming exams scheduled
-              </div>
-            ) : (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Subject</Th>
-                    <Th>Date</Th>
-                    <Th>Time</Th>
-                    <Th>Room</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {exams.map((exam) => (
-                    <tr key={exam.id} className="border-t border-border">
-                      <Td>{exam.subjectName}</Td>
-                      <Td>{exam.examDate}</Td>
-                      <Td>{exam.startTime} – {exam.endTime}</Td>
-                      <Td>{exam.room || '—'}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            )}
+                <div className="flex flex-wrap gap-2">
+                  <Link to="/teacher/attendance">
+                    <Button size="sm" variant="secondary">Attendance</Button>
+                  </Link>
+                  <Link to="/teacher/pupils">
+                    <Button size="sm" variant="ghost">View pupils</Button>
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-2xl border border-blossom-200/80 bg-white p-5 shadow-sm shadow-blossom-500/5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold tracking-tight text-ink">Attendance overview</h2>
+            <span className="text-xs text-muted">Today</span>
           </div>
-        </>
-      )}
-    </div>
-  )
-}
+          {!classId ? (
+            <p className="py-6 text-sm text-muted">Assign a class to see today’s attendance.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                ['Present', present],
+                ['Absent', absent],
+                ['Late', late],
+                ['Excused', excused],
+              ].map(([label, count]) => (
+                <div key={label} className="rounded-xl bg-brand-50/70 px-3 py-3">
+                  <p className="text-[11px] uppercase tracking-wide text-muted">{label}</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">{count}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
-function formatStatus(status) {
-  const labels = {
-    DRAFT: 'Draft',
-    NOT_STARTED: 'Not started',
-    SUBMITTED: 'Submitted',
-    PUBLISHED: 'Published',
-  }
-  return labels[status] || status || '—'
-}
-
-function PerformerList({ title, icon, items, empty }) {
-  return (
-    <div>
-      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-        {icon}
-        {title}
-      </p>
-      {items.length === 0 ? (
-        <p className="text-sm text-muted">{empty}</p>
-      ) : (
-        <ul className="space-y-2">
-          {items.map((item) => (
-            <li key={item.studentId} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
-              <div className="min-w-0">
-                <p className="truncate font-medium text-slate-900">{item.studentName}</p>
-                <p className="text-xs text-muted">{item.admissionNumber}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-semibold tabular-nums">{item.averageScore ?? '—'}</p>
-                <p className="text-xs text-muted">{item.letterGrade || '—'}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+        <section className="rounded-2xl border border-blossom-200/80 bg-white p-5 shadow-sm shadow-blossom-500/5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold tracking-tight text-ink">Recent activity</h2>
+            <Link to="/teacher/announcements" className="text-xs font-medium text-brand-700 hover:text-brand-700">
+              Announcements
+            </Link>
+          </div>
+          {recent.length === 0 ? (
+            <p className="py-6 text-sm text-muted">No recent activity yet.</p>
+          ) : (
+            <ul className="space-y-3">
+              {recent.map((item) => (
+                <li key={item.id} className="rounded-xl bg-brand-50/70 px-3 py-2">
+                  <p className="text-sm font-medium text-ink">{item.text}</p>
+                  <p className="mt-0.5 text-xs text-muted">{item.meta}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   )
 }

@@ -1,23 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary-50: #eef2ff;
-  --color-primary-100: #e0e7ff;
-  --color-primary-200: #c7d2fe;
-  --color-primary-500: #6366f1;
-  --color-primary-600: #4f46e5;
-  --color-primary-700: #4338ca;
-  --color-primary-800: #3730a3;
-  --color-surface: #f8fafc;
+  /* Portal primary = website brand green */
+  --color-primary-50: #f4faec;
+  --color-primary-100: #e4f4d6;
+  --color-primary-200: #c9e9ae;
+  --color-primary-500: #66b23a;
+  --color-primary-600: #4e8f2b;
+  --color-primary-700: #3d6f24;
+  --color-primary-800: #325820;
+
+  --color-surface: #fdf8f9;
   --color-card: #ffffff;
-  --color-border: #e2e8f0;
-  --color-muted: #64748b;
-  --color-chart-1: #4f46e5;
-  --color-chart-2: #0ea5e9;
-  --color-chart-3: #10b981;
-  --color-chart-4: #f59e0b;
-  --color-chart-5: #ef4444;
-  --color-chart-6: #8b5cf6;
+  --color-border: #f0d9e2;
+  --color-muted: #5a6b60;
+
+  --color-chart-1: #4e8f2b;
+  --color-chart-2: #e8548a;
+  --color-chart-3: #2aa79b;
+  --color-chart-4: #f2b13c;
+  --color-chart-5: #cf3b72;
+  --color-chart-6: #66b23a;
 
   --color-brand-50: #f4faec;
   --color-brand-100: #e4f4d6;
@@ -55,7 +58,7 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   background: var(--color-surface);
-  color: #0f172a;
+  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -103,7 +106,7 @@ textarea {
 }
 
 .skeleton-shimmer {
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, #f0d9e2 25%, #f4faec 50%, #f0d9e2 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }

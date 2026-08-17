@@ -56,9 +56,9 @@ function Header() {
           scrolled ? 'border-blossom-200 shadow-sm shadow-blossom-500/10' : 'border-transparent'
         }`}
       >
-        <Container className="flex h-20 items-center justify-between gap-6">
+        <Container className="flex h-24 items-center justify-between gap-6">
           <Link to="/" className="flex items-center" aria-label={`${SCHOOL.name} home`}>
-            <img src={SCHOOL.logo} alt={SCHOOL.name} className="h-11 w-auto sm:h-12" />
+            <img src={SCHOOL.logo} alt={SCHOOL.name} className="h-16 w-auto sm:h-20" />
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex">
@@ -143,7 +143,7 @@ function Footer() {
       <Container className="grid gap-12 py-16 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
         <div>
           <div className="inline-flex rounded-2xl bg-white p-3">
-            <img src={SCHOOL.logo} alt={SCHOOL.name} className="h-10 w-auto" />
+            <img src={SCHOOL.logo} alt={SCHOOL.name} className="h-16 w-auto" />
           </div>
           <p className="mt-6 max-w-sm text-sm leading-relaxed text-white/65">
             A Muslim nursery and primary school in Ajah, Lagos, where a values-based curriculum meets modern, hands-on

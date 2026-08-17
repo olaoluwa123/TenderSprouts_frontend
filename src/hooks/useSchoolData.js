@@ -33,7 +33,7 @@ export function useSubjects() {
 export function useTeachers(enabled = true) {
   return useAsync(
     () => enabled
-      ? usersApi.list({ role: 'TEACHER', isActive: true, size: 100 }).then((p) => p.content).catch(() => [])
+      ? teachersApi.list({ size: 100 }).then((p) => p.content).catch(() => [])
       : Promise.resolve([]),
     [enabled],
   )

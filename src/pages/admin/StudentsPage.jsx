@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { studentsApi } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { useClasses } from '@/hooks/useSchoolData'
 import { ClassSelect } from '@/components/ui/SchoolSelects'
 import { parseStudentParentCsv } from '@/lib/csvImport'
-import { Alert, Button, Field, Input, Loading, Modal, PageHeader, Select, Table, Td, Th } from '@/components/ui'
+import { Alert, Badge, Button, Field, Input, Loading, Modal, PageHeader, Select, Table, Td, Th } from '@/components/ui'
 
 const TEMPLATE_URL = '/templates/student-parent-import-template.csv'
 
@@ -18,6 +19,14 @@ const emptyForm = {
   parentEmail: '',
   parentFullName: '',
   parentPhone: '',
+}
+
+const emptyEdit = {
+  firstName: '',
+  lastName: '',
+  gender: 'MALE',
+  dateOfBirth: '',
+  isActive: true,
 }
 
 export function StudentsPage() {
@@ -34,6 +43,8 @@ export function StudentsPage() {
   const { data: classes } = useClasses()
   const [open, setOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [editPupil, setEditPupil] = useState(null)
+  const [editForm, setEditForm] = useState(emptyEdit)
   const [form, setForm] = useState(emptyForm)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
@@ -43,6 +54,8 @@ export function StudentsPage() {
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
   const fileInputRef = useRef(null)
+
+  const classNameFor = (id) => classes?.find((c) => c.id === id)?.name || '—'
 
   const handleOnboard = async (e) => {
     e.preventDefault()
@@ -64,16 +77,50 @@ export function StudentsPage() {
       setForm(emptyForm)
       reload()
     } catch (err) {
-      setSubmitError(err?.message || 'Onboarding failed')
+      setSubmitError(err?.message || 'Could not add pupil')
     } finally {
       setSubmitting(false)
     }
   }
 
-  const openModal = () => {
+  const openAddModal = () => {
     setForm(emptyForm)
     setSubmitError(null)
     setOpen(true)
+  }
+
+  const openEdit = (pupil) => {
+    setEditPupil(pupil)
+    setEditForm({
+      firstName: pupil.firstName || '',
+      lastName: pupil.lastName || '',
+      gender: pupil.gender || 'MALE',
+      dateOfBirth: pupil.dateOfBirth || '',
+      isActive: pupil.isActive !== false,
+    })
+    setSubmitError(null)
+  }
+
+  const handleEdit = async (e) => {
+    e.preventDefault()
+    if (!editPupil) return
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      await studentsApi.update(editPupil.id, {
+        firstName: editForm.firstName,
+        lastName: editForm.lastName,
+        gender: editForm.gender,
+        dateOfBirth: editForm.dateOfBirth || undefined,
+        isActive: editForm.isActive,
+      })
+      setEditPupil(null)
+      reload()
+    } catch (err) {
+      setSubmitError(err?.message || 'Could not update pupil')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const openImportModal = () => {
@@ -82,9 +129,7 @@ export function StudentsPage() {
     setParseError(null)
     setImportResult(null)
     setImportOpen(true)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const handleFileChange = async (e) => {
@@ -109,9 +154,7 @@ export function StudentsPage() {
     try {
       const result = await studentsApi.importCsv(importFile)
       setImportResult(result)
-      if (result.successCount > 0) {
-        reload()
-      }
+      if (result.successCount > 0) reload()
     } catch (err) {
       setParseError(err?.message || 'Import failed')
     } finally {
@@ -130,17 +173,18 @@ export function StudentsPage() {
   return (
     <div>
       <PageHeader
-        title="Students"
+        title="Pupil Management"
+        subtitle="All pupils"
         actions={(
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={openImportModal}>Import CSV</Button>
-            <Button onClick={openModal}>Onboard student & parent</Button>
+            <Button onClick={openAddModal}>Add pupil</Button>
           </div>
         )}
       />
       <div className="mb-4 flex flex-wrap gap-3">
         <Input
-          placeholder="Search..."
+          placeholder="Search pupils…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
@@ -151,27 +195,52 @@ export function StudentsPage() {
           classes={classes ?? []}
           className="max-w-xs"
         />
+        <Link to="/admin/enrollments">
+          <Button variant="secondary">Promote pupils</Button>
+        </Link>
       </div>
       {error && <Alert>{error}</Alert>}
       {loading ? <Loading /> : (
         <Table>
-          <thead><tr><Th>Name</Th><Th>Admission #</Th><Th>Class</Th></tr></thead>
+          <thead>
+            <tr>
+              <Th>Name</Th>
+              <Th>Admission #</Th>
+              <Th>Class</Th>
+              <Th>Status</Th>
+              <Th>Actions</Th>
+            </tr>
+          </thead>
           <tbody>
             {data?.content.map((s) => (
               <tr key={s.id} className="border-t border-border">
                 <Td>{s.firstName} {s.lastName}</Td>
                 <Td>{s.admissionNumber}</Td>
-                <Td>{classes?.find((c) => c.id === s.classId)?.name || '—'}</Td>
+                <Td>{classNameFor(s.classId)}</Td>
+                <Td>
+                  <Badge tone={s.isActive === false ? 'danger' : 'success'}>
+                    {s.isActive === false ? 'Inactive' : 'Active'}
+                  </Badge>
+                </Td>
+                <Td>
+                  <div className="flex flex-wrap gap-2">
+                    <Link to={`/admin/students/${s.id}`}>
+                      <Button size="sm" variant="secondary">View</Button>
+                    </Link>
+                    <Button size="sm" variant="ghost" onClick={() => openEdit(s)}>Edit</Button>
+                  </div>
+                </Td>
               </tr>
             ))}
           </tbody>
         </Table>
       )}
-      <Modal open={open} onClose={() => setOpen(false)} title="Onboard student & parent">
+
+      <Modal open={open} onClose={() => setOpen(false)} title="Add pupil">
         <form onSubmit={handleOnboard} className="space-y-4">
           {submitError && <Alert>{submitError}</Alert>}
           <div>
-            <p className="text-sm font-medium text-muted-foreground mb-2">Student</p>
+            <p className="mb-2 text-sm font-medium text-ink">Pupil</p>
             <div className="space-y-3">
               <Field label="First name">
                 <Input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />
@@ -191,7 +260,7 @@ export function StudentsPage() {
                   <option value="FEMALE">Female</option>
                 </Select>
               </Field>
-              <Field label="Class">
+              <Field label="Assign to class">
                 <Select value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })} required>
                   <option value="">Select class</option>
                   {classes?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -200,7 +269,7 @@ export function StudentsPage() {
             </div>
           </div>
           <div>
-            <p className="text-sm font-medium text-muted-foreground mb-2">Parent / guardian</p>
+            <p className="mb-2 text-sm font-medium text-ink">Parent / guardian</p>
             <div className="space-y-3">
               <Field label="Email">
                 <Input type="email" value={form.parentEmail} onChange={(e) => setForm({ ...form, parentEmail: e.target.value })} required />
@@ -213,20 +282,54 @@ export function StudentsPage() {
               </Field>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            A parent portal account is created and an email is sent with login credentials. The parent must change their password on first sign-in.
+          <p className="text-xs text-muted">
+            Creates the parent portal account and emails login credentials. The parent must change their password on first sign-in.
           </p>
           <Button type="submit" disabled={submitting}>
-            {submitting ? 'Onboarding…' : 'Onboard & send credentials email'}
+            {submitting ? 'Saving…' : 'Add pupil'}
           </Button>
         </form>
       </Modal>
-      <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Import students & parents from CSV">
+
+      <Modal open={!!editPupil} onClose={() => setEditPupil(null)} title="Edit pupil">
+        <form onSubmit={handleEdit} className="space-y-3">
+          {submitError && <Alert>{submitError}</Alert>}
+          <Field label="First name">
+            <Input value={editForm.firstName} onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })} required />
+          </Field>
+          <Field label="Last name">
+            <Input value={editForm.lastName} onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })} required />
+          </Field>
+          <Field label="Gender">
+            <Select value={editForm.gender} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}>
+              <option value="MALE">Male</option>
+              <option value="FEMALE">Female</option>
+            </Select>
+          </Field>
+          <Field label="Date of birth">
+            <Input type="date" value={editForm.dateOfBirth || ''} onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })} />
+          </Field>
+          <Field label="Status">
+            <Select
+              value={editForm.isActive ? 'ACTIVE' : 'WITHDRAWN'}
+              onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'ACTIVE' })}
+            >
+              <option value="ACTIVE">Active</option>
+              <option value="WITHDRAWN">Withdrawn / inactive</option>
+            </Select>
+          </Field>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? 'Saving…' : 'Save changes'}
+          </Button>
+        </form>
+      </Modal>
+
+      <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Import pupils & parents from CSV">
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Upload a CSV with one row per student. Parent details are on the same row.
+          <p className="text-sm text-muted">
+            Upload a CSV with one row per pupil. Parent details are on the same row.
             {' '}
-            <a href={TEMPLATE_URL} download className="text-primary underline">Download template</a>
+            <a href={TEMPLATE_URL} download className="font-medium text-brand-700 underline hover:text-brand-700">Download template</a>
           </p>
           <Field label="CSV file">
             <Input
@@ -238,18 +341,18 @@ export function StudentsPage() {
           </Field>
           {parseError && <Alert>{parseError}</Alert>}
           {importResult && (
-            <Alert>
+            <Alert tone="success">
               Imported {importResult.successCount} of {importResult.totalRows} rows
               {importResult.failureCount > 0 ? ` (${importResult.failureCount} failed)` : ''}.
             </Alert>
           )}
           {previewRows.length > 0 && (
-            <div className="overflow-x-auto max-h-80">
+            <div className="max-h-80 overflow-x-auto">
               <Table>
                 <thead>
                   <tr>
                     <Th>Row</Th>
-                    <Th>Student</Th>
+                    <Th>Pupil</Th>
                     <Th>Admission #</Th>
                     <Th>Class</Th>
                     <Th>Parent</Th>
@@ -268,11 +371,7 @@ export function StudentsPage() {
                         <Td>{row.className}</Td>
                         <Td>{row.parentName}</Td>
                         <Td>{row.parentEmail}</Td>
-                        <Td>
-                          {result
-                            ? (result.status === 'IMPORTED' ? result.message : result.message)
-                            : row.previewStatus}
-                        </Td>
+                        <Td>{result ? result.message : row.previewStatus}</Td>
                       </tr>
                     )
                   })}
@@ -281,7 +380,7 @@ export function StudentsPage() {
             </div>
           )}
           <Button onClick={handleImport} disabled={!canImport || !importFile}>
-            {importing ? 'Importing…' : `Import ${previewRows.length} student${previewRows.length === 1 ? '' : 's'}`}
+            {importing ? 'Importing…' : `Import ${previewRows.length} pupil${previewRows.length === 1 ? '' : 's'}`}
           </Button>
         </div>
       </Modal>

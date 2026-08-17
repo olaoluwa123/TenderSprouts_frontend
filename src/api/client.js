@@ -1,6 +1,8 @@
+import { loadTokens } from '@/lib/auth-storage'
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
 
-let getTokens = () => null
+let getTokens = () => loadTokens()
 let setTokens = () => {}
 let refreshTokens = async () => null
 let onSessionExpired = () => {}
@@ -110,11 +112,21 @@ export async function apiRequest(path, options = {}) {
   }
 
   const contentType = res.headers.get('content-type') || ''
-  if (contentType.includes('application/pdf')) {
+  if (
+    contentType.includes('application/pdf')
+    || contentType.includes('text/csv')
+    || contentType.includes('application/octet-stream')
+    || contentType.includes('application/vnd.ms-excel')
+  ) {
     return await res.blob()
   }
   if (contentType.includes('application/json')) {
     return await res.json()
+  }
+  // Fall back to blob for non-empty binary/export responses
+  const buf = await res.arrayBuffer()
+  if (buf.byteLength > 0) {
+    return new Blob([buf], { type: contentType || 'application/octet-stream' })
   }
   return undefined
 }
@@ -122,12 +134,22 @@ export async function apiRequest(path, options = {}) {
 export const api = {
   get: (path, params, auth = true) =>
     apiRequest(path, { method: 'GET', params, auth }),
+  getBlob: async (path, params, auth = true) => {
+    const result = await apiRequest(path, { method: 'GET', params, auth })
+    if (result instanceof Blob) return result
+    if (result == null) return new Blob()
+    return new Blob([JSON.stringify(result)], { type: 'application/json' })
+  },
   post: (path, body, params, auth = true) =>
     apiRequest(path, { method: 'POST', body, params, auth }),
   put: (path, body, params, auth = true) =>
     apiRequest(path, { method: 'PUT', body, params, auth }),
   patch: (path, body, auth = true) =>
     apiRequest(path, { method: 'PATCH', body, auth }),
-  delete: (path, auth = true) =>
-    apiRequest(path, { method: 'DELETE', auth }),
+  delete: (path, paramsOrAuth = true, auth = true) => {
+    if (typeof paramsOrAuth === 'boolean') {
+      return apiRequest(path, { method: 'DELETE', auth: paramsOrAuth })
+    }
+    return apiRequest(path, { method: 'DELETE', params: paramsOrAuth, auth })
+  },
 }
