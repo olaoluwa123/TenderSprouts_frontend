@@ -40,16 +40,17 @@ export function ClassSelect({
   classes,
   className,
   alwaysShow = false,
+  allowAll = false,
 }) {
   const list = classes ?? []
-  const onlyId = list.length === 1 ? String(list[0].id) : null
+  const onlyId = !allowAll && list.length === 1 ? String(list[0].id) : null
 
   useEffect(() => {
     if (!onlyId) return
     if (String(value || '') !== onlyId) onChange(onlyId)
   }, [onlyId, value, onChange])
 
-  if (!alwaysShow && list.length <= 1) {
+  if (!allowAll && !alwaysShow && list.length <= 1) {
     if (list.length === 0) return null
     return (
       <p className={className ? `${className} text-sm font-medium text-ink` : 'text-sm font-medium text-ink'}>
@@ -60,7 +61,7 @@ export function ClassSelect({
 
   return (
     <Select value={value} onChange={(e) => onChange(e.target.value)} className={className}>
-      <option value="">Select class</option>
+      <option value="">{allowAll ? 'All classes' : 'Select class'}</option>
       {list.map((c) => (
         <option key={c.id} value={c.id}>{c.name}</option>
       ))}

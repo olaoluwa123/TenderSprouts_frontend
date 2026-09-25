@@ -16,8 +16,14 @@ export function configureApiClient(config) {
   onSessionExpired = config.onSessionExpired ?? (() => {})
 }
 
+function joinApiPath(base, path) {
+  const normalizedBase = String(base || '/api').replace(/\/+$/, '')
+  const normalizedPath = String(path || '').startsWith('/') ? path : `/${path}`
+  return `${normalizedBase}${normalizedPath}`
+}
+
 function buildUrl(path, params) {
-  const url = new URL(`${API_BASE}${path}`, window.location.origin)
+  const url = new URL(joinApiPath(API_BASE, path), window.location.origin)
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
@@ -25,7 +31,7 @@ function buildUrl(path, params) {
       }
     })
   }
-  return url.pathname + url.search
+  return url.href
 }
 
 async function parseError(res) {
@@ -103,7 +109,15 @@ export async function apiRequest(path, options = {}) {
     throw { message: 'Session expired. Please sign in again.', status: 401 }
   }
 
-  if (res.status === 204 || res.status === 202) {
+  if (res.status === 204) {
+    return undefined
+  }
+
+  if (res.status === 202) {
+    const contentType = res.headers.get('content-type') || ''
+    if (contentType.includes('application/json')) {
+      return await res.json()
+    }
     return undefined
   }
 

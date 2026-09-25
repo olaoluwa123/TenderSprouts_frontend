@@ -25,6 +25,7 @@ export const authApi = {
 export const usersApi = {
   list: (params) => api.get('/users', params),
   get: (id) => api.get(`/users/${id}`),
+  create: (data) => api.post('/users', data),
   updateStatus: (id, isActive) =>
     api.patch(`/users/${id}/status`, { isActive }),
   updateRole: (id, role) =>
@@ -41,11 +42,27 @@ export const studentsApi = {
   profile: (id) => api.get(`/students/${id}/profile`),
   create: (data) => api.post('/students', data),
   onboard: (data) => api.post('/students/onboard', data),
-  importCsv: (file) => {
+  importCsv: async (file) => {
     const formData = new FormData()
     formData.append('file', file)
-    return api.post('/students/import-csv', formData)
+    const accepted = await api.post('/students/import-csv', formData)
+    if (!accepted?.jobId) {
+      throw { message: 'Import did not return a job id' }
+    }
+    const terminal = new Set(['COMPLETED', 'FAILED'])
+    if (terminal.has(accepted.status)) {
+      return api.get(`/students/import-csv/jobs/${accepted.jobId}`)
+    }
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const job = await api.get(`/students/import-csv/jobs/${accepted.jobId}`)
+      if (terminal.has(job.status)) {
+        return job
+      }
+    }
+    throw { message: 'Import timed out while waiting for results' }
   },
+  getImportCsvJob: (jobId) => api.get(`/students/import-csv/jobs/${jobId}`),
   update: (id, data) => api.patch(`/students/${id}`, data),
   onboardParent: (id, data) =>
     api.post(`/students/${id}/onboard-parent`, data),
@@ -59,6 +76,19 @@ export const studentsApi = {
     api.get(`/students/${id}/report-cards/${termId}`),
   reportCardPdf: (id, termId) =>
     api.get(`/students/${id}/report-cards/${termId}/pdf`),
+  publishedReports: (id) => api.get(`/students/${id}/published-reports`),
+  publishedAssessment: (id, params) =>
+    api.get(`/students/${id}/published-reports/assessment-sheets`, params),
+  publishedAssessmentPdf: (id, params) =>
+    api.get(`/students/${id}/published-reports/assessment-sheets/pdf`, params),
+  publishedBehavioural: (id, params) =>
+    api.get(`/students/${id}/published-reports/behavioural`, params),
+  publishedBehaviouralPdf: (id, params) =>
+    api.get(`/students/${id}/published-reports/behavioural/pdf`, params),
+  publishedPreschool: (id, params) =>
+    api.get(`/students/${id}/published-reports/preschool`, params),
+  publishedPreschoolPdf: (id, params) =>
+    api.get(`/students/${id}/published-reports/preschool/pdf`, params),
 }
 
 // Enrollments
@@ -71,7 +101,7 @@ export const enrollmentsApi = {
 export const dashboardApi = {
   admin: () => api.get('/dashboard/admin'),
   activity: (limit = 50) => api.get('/dashboard/activity', { limit }),
-  teacher: () => api.get('/dashboard/teacher'),
+  teacher: (params) => api.get('/dashboard/teacher', params),
 }
 
 // Parents
@@ -97,18 +127,34 @@ export const teachersApi = {
   profile: (id) => api.get(`/teachers/${id}/profile`),
   update: (id, data) => api.patch(`/teachers/${id}`, data),
   onboard: (data) => api.post('/teachers/onboard', data),
-  importCsv: (file) => {
+  importCsv: async (file) => {
     const formData = new FormData()
     formData.append('file', file)
-    return api.post('/teachers/import-csv', formData)
+    const accepted = await api.post('/teachers/import-csv', formData)
+    if (!accepted?.jobId) {
+      throw { message: 'Import did not return a job id' }
+    }
+    const terminal = new Set(['COMPLETED', 'FAILED'])
+    if (terminal.has(accepted.status)) {
+      return api.get(`/teachers/import-csv/jobs/${accepted.jobId}`)
+    }
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const job = await api.get(`/teachers/import-csv/jobs/${accepted.jobId}`)
+      if (terminal.has(job.status)) {
+        return job
+      }
+    }
+    throw { message: 'Import timed out while waiting for results' }
   },
+  getImportCsvJob: (jobId) => api.get(`/teachers/import-csv/jobs/${jobId}`),
   classes: (teacherId) => api.get(`/teachers/${teacherId}/classes`),
   assignClass: (teacherId, classId) =>
     api.post(`/teachers/${teacherId}/classes`, undefined, { classId }),
   reassignClass: (teacherId, classId) =>
     api.post(`/teachers/${teacherId}/classes/reassign`, undefined, { classId }),
-  unassignClass: (teacherId) =>
-    api.post(`/teachers/${teacherId}/classes/unassign`),
+  unassignClass: (teacherId, classId) =>
+    api.post(`/teachers/${teacherId}/classes/unassign`, undefined, { classId }),
   listSubjects: (teacherId) => api.get(`/teachers/${teacherId}/subjects`),
   assignSubject: (teacherId, classId, subjectId) =>
     api.post(`/teachers/${teacherId}/subjects`, undefined, { classId, subjectId }),
@@ -138,7 +184,9 @@ export const sessionsApi = {
 export const classesApi = {
   list: (params) => api.get('/classes', params),
   get: (id, params) => api.get(`/classes/${id}`, params),
-  create: (name) => api.post('/classes', { name }),
+  create: ({ name, classGroup }) => api.post('/classes', { name, classGroup }),
+  update: (id, { name, classGroup, isActive }) =>
+    api.put(`/classes/${id}`, { name, classGroup, isActive }),
   subjects: (classId) => api.get(`/classes/${classId}/subjects`),
   assignSubject: (classId, subjectId) =>
     api.post(`/classes/${classId}/subjects`, { subjectId }),
@@ -183,6 +231,24 @@ export const gradesApi = {
     api.put(`/students/${studentId}/grades`, payload),
 }
 
+export const behaviouralReportsApi = {
+  list: (params) => api.get('/behavioural-reports', params),
+  save: (data) => api.put('/behavioural-reports', data),
+  publish: (data) => api.post('/behavioural-reports/publish', data),
+}
+
+export const assessmentSheetsApi = {
+  get: (params) => api.get('/assessment-sheets', params),
+  save: (data) => api.put('/assessment-sheets', data),
+  publish: (data) => api.post('/assessment-sheets/publish', data),
+}
+
+export const preschoolReportsApi = {
+  get: (params) => api.get('/preschool-reports', params),
+  save: (data) => api.put('/preschool-reports', data),
+  publish: (data) => api.post('/preschool-reports/publish', data),
+}
+
 // Term results
 export const termResultsApi = {
   list: (params) => api.get('/term-results', params),
@@ -196,6 +262,8 @@ export const termResultsApi = {
     api.post('/term-results/submit', { termId, classId, sessionId }),
   approve: (termId, classId) =>
     api.post('/term-results/approve', { termId, classId }),
+  reject: (termId, classId) =>
+    api.post('/term-results/reject', { termId, classId }),
   publish: (termId, classId) =>
     api.post('/term-results/publish', { termId, classId }),
   update: (id, data) => api.put(`/term-results/${id}`, data),
@@ -265,20 +333,14 @@ export const feesApi = {
     api.get('/fees/republish-preview', { classId, termId }),
   republish: (classId, termId) =>
     api.post('/fees/structures/republish', undefined, { classId, termId }),
-  invoices: (classId, termId) =>
-    api.get('/fees/invoices', { classId, termId }),
+  invoices: ({ termId, classId } = {}) =>
+    api.get('/fees/invoices', { termId, classId }),
   markPaid: (id) => api.post(`/fees/invoices/${id}/mark-paid`),
   my: () => api.get('/fees/my'),
   generateForStudent: (studentId) =>
     api.post(`/fees/students/${studentId}/generate`),
-  initializePayment: () => api.post('/fees/payments/initialize'),
+  initializePayment: ({ sessionId, termId } = {}) =>
+    api.post('/fees/payments/initialize', undefined, { sessionId, termId }),
   verifyPayment: (reference) =>
     api.post('/fees/payments/verify', { reference }),
-}
-
-// Reports
-export const reportsApi = {
-  preview: (key, params) => api.get(`/reports/${key}`, params),
-  export: (key, format, params) =>
-    api.getBlob(`/reports/${key}/export`, { ...params, format }),
 }

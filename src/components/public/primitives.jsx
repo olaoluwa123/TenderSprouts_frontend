@@ -129,21 +129,25 @@ export function ActionLink({ to, href, variant = 'primary', size = 'md', classNa
 }
 
 /**
- * Stand-in for school photography. Swap `src` in once real images land in /public/photos.
+ * School photography tile. Pass `src` (and `alt`) for a cover image; omit `src` for the grey placeholder.
  */
-export function PhotoPlaceholder({ label, ratio = 'aspect-[4/3]', className = '', children }) {
+export function PhotoPlaceholder({ label, src, alt, ratio = 'aspect-[4/3]', className = '', children }) {
   return (
     <div
       className={`photo-placeholder relative overflow-hidden rounded-3xl ring-1 ring-blossom-200 ${ratio} ${className}`}
     >
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
-        <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8 text-brand-600/60" aria-hidden="true">
-          <rect x="3" y="5" width="18" height="14" rx="3" stroke="currentColor" strokeWidth="1.5" />
-          <circle cx="8.5" cy="10" r="1.5" fill="currentColor" />
-          <path d="M4 17l4.5-4.5 3 3 3.5-3.5L20 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-        <span className="px-4 text-xs font-semibold uppercase tracking-[0.18em] text-brand-800/60">{label}</span>
-      </div>
+      {src ? (
+        <img src={src} alt={alt || label || ''} className="absolute inset-0 h-full w-full object-cover" />
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
+          <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8 text-brand-600/60" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="3" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="8.5" cy="10" r="1.5" fill="currentColor" />
+            <path d="M4 17l4.5-4.5 3 3 3.5-3.5L20 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <span className="px-4 text-xs font-semibold uppercase tracking-[0.18em] text-brand-800/60">{label}</span>
+        </div>
+      )}
       {children}
     </div>
   )

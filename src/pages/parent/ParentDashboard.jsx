@@ -185,6 +185,12 @@ export function ParentDashboard() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
+              to={studentId ? `/parent/children/${studentId}` : '/parent/children'}
+              className="rounded-full border border-brand-300 bg-white px-3.5 py-1.5 text-sm font-semibold text-brand-700 transition hover:bg-blossom-50"
+            >
+              View profile
+            </Link>
+            <Link
               to="/parent/results"
               className="rounded-full border border-brand-300 bg-white px-3.5 py-1.5 text-sm font-semibold text-brand-700 transition hover:bg-blossom-50"
             >
@@ -231,6 +237,13 @@ export function ParentDashboard() {
             value={money(outstanding)}
             hint={outstanding > 0 ? 'Payment pending' : 'All fees settled'}
             to="/parent/fees"
+          />
+          <StatTile
+            icon={CalendarDays}
+            label="Exam timetable"
+            value="View"
+            hint="Published exam schedule"
+            to="/parent/exam-timetable"
           />
         </div>
       </section>

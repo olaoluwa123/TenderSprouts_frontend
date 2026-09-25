@@ -1,24 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { gradesApi } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { useAuth } from '@/hooks/useAuth'
 import { useActiveSession, useActiveTerm, useAssignedClasses, useStudents } from '@/hooks/useSchoolData'
+import { bandClassName, toPerformanceBand } from '@/lib/performanceBand'
+import { scoreTypeHeader } from '@/lib/reportCard'
 import { ClassSelect } from '@/components/ui/SchoolSelects'
 import {
   Alert, Badge, Button, EmptyState, Input, Loading, PageHeader, Table, Td, Th,
 } from '@/components/ui'
-
-function toLetter(total) {
-  if (total == null || Number.isNaN(total)) return '—'
-  const score = Math.round(total)
-  if (score >= 70) return 'A'
-  if (score >= 60) return 'B'
-  if (score >= 50) return 'C'
-  if (score >= 45) return 'D'
-  if (score >= 40) return 'E'
-  return 'F'
-}
 
 function computeSubjectTotal(cells) {
   if (!cells?.length) return null
@@ -36,8 +27,15 @@ function computeSubjectTotal(cells) {
 export function GradesPage() {
   const location = useLocation()
   const { isTeacher } = useAuth()
+  const isEndOfTermGrades = location.pathname.includes('end-of-term-grades')
   const termResultsPath = location.pathname.startsWith('/admin') ? '/admin/term-results' : '/teacher/term-results'
-  const { classes } = useAssignedClasses()
+  const { classes: assignedClasses } = useAssignedClasses()
+  const classes = useMemo(
+    () => (isTeacher && isEndOfTermGrades
+      ? assignedClasses.filter((schoolClass) => schoolClass.classGroup === 'PRIMARY')
+      : assignedClasses),
+    [assignedClasses, isTeacher, isEndOfTermGrades],
+  )
   const { data: session } = useActiveSession()
   const { data: activeTerm, error: activeTermError } = useActiveTerm()
   const [classId, setClassId] = useState('')
@@ -76,6 +74,9 @@ export function GradesPage() {
   }
 
   useEffect(() => {
+    if (classId && !classes.some((schoolClass) => String(schoolClass.id) === String(classId))) {
+      setClassId('')
+    }
     if (classes.length === 1 && !classId) {
       setClassId(String(classes[0].id))
     }
@@ -124,7 +125,7 @@ export function GradesPage() {
         entries,
       })
       initGridFromSheet(updated)
-      setSaveMessage('Grades saved. When all students are graded, go to Term Results to submit to admin.')
+      setSaveMessage('Grades saved. When all students are graded, go to Results to submit to admin for review.')
     } catch (err) {
       setError(err?.message || 'Failed to save grades')
     } finally {
@@ -139,6 +140,29 @@ export function GradesPage() {
     setSaveMessage(null)
   }
 
+  if (isTeacher && isEndOfTermGrades && classes.length === 0) {
+    return (
+      <div>
+        <PageHeader
+          title="End of term grades"
+          subtitle="Pick a student, then enter scores across all subjects for the term"
+          actions={(
+            <Link
+              to="/teacher/reports"
+              className="inline-flex items-center justify-center rounded-full border border-blossom-300 bg-white px-4 py-2 text-sm font-semibold text-blossom-700 hover:bg-blossom-50"
+            >
+              Back to Reports
+            </Link>
+          )}
+        />
+        <EmptyState
+          title="Not available for this class"
+          description="End of term grades are only available to teachers assigned to a primary class."
+        />
+      </div>
+    )
+  }
+
   if (selectedStudent) {
     const studentName = `${selectedStudent.firstName ?? ''} ${selectedStudent.lastName ?? ''}`.trim()
       || selectedStudent.admissionNumber
@@ -147,7 +171,11 @@ export function GradesPage() {
       <div>
         <PageHeader
           title={studentName}
-          subtitle={sheet ? `${sheet.className} · grade entry` : 'Grade entry'}
+          subtitle={
+            isEndOfTermGrades
+              ? (sheet ? `${sheet.className} · end of term grades` : 'End of term grade entry')
+              : (sheet ? `${sheet.className} · grade entry` : 'Grade entry')
+          }
           actions={(
             <Button variant="secondary" onClick={backToList}>Back to students</Button>
           )}
@@ -190,8 +218,8 @@ export function GradesPage() {
             <p className="mb-3 text-sm text-muted">
               Enter scores for each subject. Saving stores drafts only — parents cannot see them yet.
               When all students are graded, go to{' '}
-              <Link to={termResultsPath} className="text-primary underline">Term Results</Link>
-              {' '}to compute averages and submit to admin for approval.
+              <Link to={termResultsPath} className="text-primary underline">Results</Link>
+              {' '}to submit to admin for review.
             </p>
             <div className="overflow-x-auto">
               <Table>
@@ -199,10 +227,10 @@ export function GradesPage() {
                   <tr>
                     <Th>Subject</Th>
                     {assessmentTypes.map((t) => (
-                      <Th key={t.code}>{t.name} /{t.defaultMaxScore}</Th>
+                      <Th key={t.code}>{scoreTypeHeader(t.name, t.defaultMaxScore)}</Th>
                     ))}
-                    <Th>Total /100</Th>
-                    <Th>Grade</Th>
+                    <Th>{scoreTypeHeader('Total', 100)}</Th>
+                    <Th>Band</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -213,6 +241,7 @@ export function GradesPage() {
                       maxScore: t.defaultMaxScore,
                     }))
                     const total = computeSubjectTotal(cells)
+                    const band = toPerformanceBand(total)
                     return (
                       <tr key={row.subjectId} className="border-t border-border">
                         <Td>{row.subjectName}</Td>
@@ -236,15 +265,18 @@ export function GradesPage() {
                         ))}
                         <Td className="font-medium">{total != null ? total : '—'}</Td>
                         <Td>
-                          <Badge tone={total != null && total >= 50 ? 'success' : 'default'}>
-                            {toLetter(total)}
-                          </Badge>
+                          {band
+                            ? <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${bandClassName(band)}`}>{band}</span>
+                            : '—'}
                         </Td>
                       </tr>
                     )
                   })}
                 </tbody>
               </Table>
+              <p className="mt-2 text-xs text-muted">
+                Bands match the school report: Excellent 80–100, Very Good 70–79, Good 60–69, Fair 50–59, Below Average 40–49, Fail 0–39.
+              </p>
             </div>
           </>
         )}
@@ -255,7 +287,7 @@ export function GradesPage() {
   return (
     <div>
       <PageHeader
-        title="Grades"
+        title={isEndOfTermGrades ? 'End of term grades' : 'Grades'}
         subtitle={isTeacher
           ? 'Pick a student, then enter scores across all subjects for the term'
           : 'Select a class and student to enter term grades'}

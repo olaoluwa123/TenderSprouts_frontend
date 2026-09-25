@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { attendanceApi, teachersApi } from '@/api'
 import { useAuth } from '@/hooks/useAuth'
 import { useAsync } from '@/hooks/useAsync'
+import { ClassSelect } from '@/components/ui/SchoolSelects'
 import { Alert, Badge, Button, Field, Input, Loading, PageHeader, Select, Table, Td, Th } from '@/components/ui'
 
 const STATUSES = ['PRESENT', 'ABSENT', 'LATE', 'EXCUSED']
@@ -23,6 +24,7 @@ export function TeacherAttendancePage() {
   const { user } = useAuth()
   const teacherId = user?.profileId
   const [date, setDate] = useState(todayIso)
+  const [classId, setClassId] = useState('')
   const [marks, setMarks] = useState({})
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null)
@@ -33,8 +35,14 @@ export function TeacherAttendancePage() {
     [teacherId],
   )
   const classes = assignments ?? []
-  const effectiveClassId = classes[0]?.classId ? String(classes[0].classId) : ''
-  const className = classes[0]?.className || (effectiveClassId ? `Class #${effectiveClassId}` : null)
+  const classOptions = classes.map((row) => ({
+    id: row.classId,
+    name: row.className || `Class #${row.classId}`,
+  }))
+  const effectiveClassId = classId || (classes[0]?.classId ? String(classes[0].classId) : '')
+  const selectedClass = classes.find((row) => String(row.classId) === String(effectiveClassId))
+  const className = selectedClass?.className
+    || (effectiveClassId ? `Class #${effectiveClassId}` : null)
 
   const { data: rows, loading, error, reload } = useAsync(
     () => (effectiveClassId
@@ -88,6 +96,16 @@ export function TeacherAttendancePage() {
       />
       {!teacherId && <Alert>Teacher profile missing.</Alert>}
       <div className="flex flex-wrap gap-3">
+        {classOptions.length > 0 && (
+          <Field label="Class">
+            <ClassSelect
+              value={effectiveClassId}
+              onChange={setClassId}
+              classes={classOptions}
+              alwaysShow={classOptions.length > 1}
+            />
+          </Field>
+        )}
         <Field label="Date">
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>

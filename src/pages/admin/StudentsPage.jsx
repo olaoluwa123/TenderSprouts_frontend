@@ -5,6 +5,7 @@ import { useAsync } from '@/hooks/useAsync'
 import { useClasses } from '@/hooks/useSchoolData'
 import { ClassSelect } from '@/components/ui/SchoolSelects'
 import { parseStudentParentCsv } from '@/lib/csvImport'
+import { ageYearsFromDob, formatAge } from '@/lib/studentProfile'
 import { Alert, Badge, Button, Field, Input, Loading, Modal, PageHeader, Select, Table, Td, Th } from '@/components/ui'
 
 const TEMPLATE_URL = '/templates/student-parent-import-template.csv'
@@ -16,6 +17,8 @@ const emptyForm = {
   gender: 'MALE',
   classId: '',
   dateOfBirth: '',
+  height: '',
+  weight: '',
   parentEmail: '',
   parentFullName: '',
   parentPhone: '',
@@ -26,6 +29,8 @@ const emptyEdit = {
   lastName: '',
   gender: 'MALE',
   dateOfBirth: '',
+  height: '',
+  weight: '',
   isActive: true,
 }
 
@@ -69,6 +74,8 @@ export function StudentsPage() {
         gender: form.gender,
         classId: Number(form.classId),
         dateOfBirth: form.dateOfBirth || undefined,
+        height: form.height || undefined,
+        weight: form.weight || undefined,
         parentEmail: form.parentEmail,
         parentFullName: form.parentFullName,
         parentPhone: form.parentPhone || undefined,
@@ -96,6 +103,8 @@ export function StudentsPage() {
       lastName: pupil.lastName || '',
       gender: pupil.gender || 'MALE',
       dateOfBirth: pupil.dateOfBirth || '',
+      height: pupil.height || '',
+      weight: pupil.weight || '',
       isActive: pupil.isActive !== false,
     })
     setSubmitError(null)
@@ -112,6 +121,8 @@ export function StudentsPage() {
         lastName: editForm.lastName,
         gender: editForm.gender,
         dateOfBirth: editForm.dateOfBirth || undefined,
+        height: editForm.height,
+        weight: editForm.weight,
         isActive: editForm.isActive,
       })
       setEditPupil(null)
@@ -151,10 +162,15 @@ export function StudentsPage() {
     if (!importFile) return
     setImporting(true)
     setParseError(null)
+    setImportResult(null)
     try {
       const result = await studentsApi.importCsv(importFile)
       setImportResult(result)
-      if (result.successCount > 0) reload()
+      if (result.status === 'FAILED') {
+        setParseError(result.errorMessage || 'Import failed')
+      } else if (result.successCount > 0) {
+        reload()
+      }
     } catch (err) {
       setParseError(err?.message || 'Import failed')
     } finally {
@@ -254,11 +270,20 @@ export function StudentsPage() {
               <Field label="Date of birth">
                 <Input type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} />
               </Field>
-              <Field label="Gender">
+              <Field label="Age">
+                <Input value={formatAge(ageYearsFromDob(form.dateOfBirth)) || '—'} disabled />
+              </Field>
+              <Field label="Sex">
                 <Select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
                   <option value="MALE">Male</option>
                   <option value="FEMALE">Female</option>
                 </Select>
+              </Field>
+              <Field label="Height">
+                <Input value={form.height} onChange={(e) => setForm({ ...form, height: e.target.value })} placeholder="e.g. 1.20m" />
+              </Field>
+              <Field label="Weight">
+                <Input value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} placeholder="e.g. 24kg" />
               </Field>
               <Field label="Assign to class">
                 <Select value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })} required>
@@ -300,7 +325,7 @@ export function StudentsPage() {
           <Field label="Last name">
             <Input value={editForm.lastName} onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })} required />
           </Field>
-          <Field label="Gender">
+          <Field label="Sex">
             <Select value={editForm.gender} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}>
               <option value="MALE">Male</option>
               <option value="FEMALE">Female</option>
@@ -308,6 +333,15 @@ export function StudentsPage() {
           </Field>
           <Field label="Date of birth">
             <Input type="date" value={editForm.dateOfBirth || ''} onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })} />
+          </Field>
+          <Field label="Age">
+            <Input value={formatAge(ageYearsFromDob(editForm.dateOfBirth)) || '—'} disabled />
+          </Field>
+          <Field label="Height">
+            <Input value={editForm.height} onChange={(e) => setEditForm({ ...editForm, height: e.target.value })} placeholder="e.g. 1.20m" />
+          </Field>
+          <Field label="Weight">
+            <Input value={editForm.weight} onChange={(e) => setEditForm({ ...editForm, weight: e.target.value })} placeholder="e.g. 24kg" />
           </Field>
           <Field label="Status">
             <Select
@@ -340,7 +374,10 @@ export function StudentsPage() {
             />
           </Field>
           {parseError && <Alert>{parseError}</Alert>}
-          {importResult && (
+          {importing && (
+            <Alert tone="info">Import queued — saving pupils and parents…</Alert>
+          )}
+          {importResult && importResult.status !== 'FAILED' && (
             <Alert tone="success">
               Imported {importResult.successCount} of {importResult.totalRows} rows
               {importResult.failureCount > 0 ? ` (${importResult.failureCount} failed)` : ''}.

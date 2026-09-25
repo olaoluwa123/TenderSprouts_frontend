@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
+import { Check, X } from 'lucide-react'
 import { studentsApi, termResultsApi } from '@/api'
 import { ReportCardDetail } from '@/components/ReportCardDetail'
 import { useAsync } from '@/hooks/useAsync'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useActiveSession, useActiveTerm, useAssignedClasses, useStudents } from '@/hooks/useSchoolData'
 import { ClassSelect } from '@/components/ui/SchoolSelects'
-import { Alert, Badge, Button, Card, Input, Loading, Modal, PageHeader, Table, Td, Th } from '@/components/ui'
+import { Alert, Badge, Button, Card, Loading, Modal, PageHeader, Table, Td, Th } from '@/components/ui'
 
 const submissionLabels = {
   DRAFT: { label: 'Draft', tone: undefined },
@@ -19,7 +20,7 @@ function formatDateTime(value) {
 }
 
 export function TermResultsPage() {
-  const { canComputeTermResults, canSubmitTermResults, canApproveTermResults } = usePermissions()
+  const { canSubmitTermResults, canApproveTermResults } = usePermissions()
   const { classes } = useAssignedClasses()
   const { data: session, error: sessionError, loading: sessionLoading } = useActiveSession()
   const { data: activeTerm, error: activeTermError } = useActiveTerm()
@@ -27,7 +28,7 @@ export function TermResultsPage() {
   const termId = activeTerm?.id ? String(activeTerm.id) : ''
   const sessionId = session?.id
   const { data: pendingSubmissions, reload: reloadPending } = useAsync(
-    () => canApproveTermResults && sessionId
+    () => canApproveTermResults
       ? termResultsApi.listSubmissions({ status: 'SUBMITTED', sessionId })
       : Promise.resolve([]),
     [canApproveTermResults, sessionId],
@@ -35,10 +36,12 @@ export function TermResultsPage() {
   const { data: students } = useStudents(classId ? Number(classId) : undefined, sessionId)
 
   useEffect(() => {
+    if (canApproveTermResults) return
     if (classes.length === 1 && !classId) {
       setClassId(String(classes[0].id))
     }
-  }, [classes, classId])
+  }, [classes, classId, canApproveTermResults])
+
   const { data, loading, reload } = useAsync(
     () => classId && termId
       ? termResultsApi.list({ classId: Number(classId), termId: Number(termId), size: 100 }).then((p) => p.content)
@@ -57,26 +60,14 @@ export function TermResultsPage() {
   const [msg, setMsg] = useState(null)
   const [error, setError] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
-  const [rowEdits, setRowEdits] = useState({})
-  const [savingId, setSavingId] = useState(null)
   const [detailStudentId, setDetailStudentId] = useState(null)
+  const [pdfLoading, setPdfLoading] = useState(false)
   const { data: detailReport, loading: detailLoading, error: detailError } = useAsync(
     () => detailStudentId && termId
       ? studentsApi.reportCard(Number(detailStudentId), Number(termId))
       : Promise.resolve(null),
     [detailStudentId, termId],
   )
-
-  useEffect(() => {
-    const next = {}
-    for (const row of data ?? []) {
-      next[row.id] = {
-        averageScore: row.averageScore ?? '',
-        comments: row.comments ?? '',
-      }
-    }
-    setRowEdits(next)
-  }, [data])
 
   const refresh = () => {
     reload()
@@ -92,7 +83,7 @@ export function TermResultsPage() {
       return
     }
     if (!sessionId) {
-      setError(sessionError || 'No active academic session. Activate a session before computing results.')
+      setError(sessionError || 'No active academic session. Activate a session before submitting results.')
       return
     }
     setActionLoading(true)
@@ -107,14 +98,9 @@ export function TermResultsPage() {
     }
   }
 
-  const compute = () => runAction(
-    () => termResultsApi.compute(Number(termId), Number(classId), sessionId),
-    'Results computed from grades',
-  )
-
   const submit = () => runAction(
     () => termResultsApi.submit(Number(termId), Number(classId), sessionId),
-    'Submitted to admin for approval',
+    'Submitted to admin for review',
   )
 
   const approve = () => runAction(
@@ -122,22 +108,27 @@ export function TermResultsPage() {
     'Approved — parents can now view and download report cards',
   )
 
-  const saveRow = async (rowId) => {
-    const edit = rowEdits[rowId]
-    if (!edit) return
-    setSavingId(rowId)
+  const reject = () => runAction(
+    () => termResultsApi.reject(Number(termId), Number(classId)),
+    'Sent back to teacher — results are draft again',
+  )
+
+  const downloadPdf = async (studentId) => {
+    if (!studentId || !termId) return
+    setPdfLoading(true)
     setError(null)
     try {
-      await termResultsApi.update(rowId, {
-        averageScore: edit.averageScore !== '' ? Number(edit.averageScore) : null,
-        comments: edit.comments || null,
-      })
-      setMsg('Result updated')
-      refresh()
+      const blob = await studentsApi.reportCardPdf(Number(studentId), Number(termId))
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `tender-sprouts-report-${studentName(studentId).replace(/\s+/g, '-')}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
     } catch (err) {
-      setError(err?.message || 'Failed to save result')
+      setError(err?.message || 'Could not download report card')
     } finally {
-      setSavingId(null)
+      setPdfLoading(false)
     }
   }
 
@@ -150,10 +141,11 @@ export function TermResultsPage() {
   const termName = activeTerm?.name
   const status = submission?.status
   const statusMeta = status ? submissionLabels[status] : null
-  const canCompute = canComputeTermResults && (!status || status === 'DRAFT')
-  const canSubmit = canSubmitTermResults && status === 'DRAFT' && (data?.length ?? 0) > 0
-  const canApprove = canApproveTermResults && status === 'SUBMITTED' && (data?.length ?? 0) > 0
-  const canEditRows = canApproveTermResults && status === 'SUBMITTED'
+  const canSubmit = canSubmitTermResults && (!status || status === 'DRAFT')
+  const canApprove = canApproveTermResults && status === 'SUBMITTED' && classId
+  const filteredPending = (pendingSubmissions ?? []).filter(
+    (item) => !classId || String(item.classId) === classId,
+  )
 
   const reviewSubmission = (submissionClassId) => {
     setClassId(String(submissionClassId))
@@ -161,43 +153,38 @@ export function TermResultsPage() {
     setError(null)
   }
 
+  const pageTitle = canApproveTermResults ? 'Review Results' : 'Results'
+  const pageSubtitle = canApproveTermResults
+    ? 'All submitted class results appear below — filter by class to narrow the list'
+    : canSubmitTermResults
+      ? 'Submit class results to admin after entering grades'
+      : 'Approved results'
+
   return (
     <div>
-      <PageHeader
-        title="Term Results"
-        subtitle={
-          canApproveTermResults
-            ? 'Review submitted class results and approve for parents'
-            : canSubmitTermResults
-              ? 'Compute results from grades, then submit to admin'
-              : 'Approved term results'
-        }
-      />
+      <PageHeader title={pageTitle} subtitle={pageSubtitle} />
       <div className="mb-4 flex flex-wrap gap-3 items-end">
-        <ClassSelect value={classId} onChange={setClassId} classes={classes} className="max-w-xs" />
+        <ClassSelect
+          value={classId}
+          onChange={setClassId}
+          classes={classes}
+          className="max-w-xs"
+          allowAll={canApproveTermResults}
+          alwaysShow={canApproveTermResults}
+        />
         {activeTerm && <Badge tone="success">Current term: {activeTerm.name}</Badge>}
-        {statusMeta && (
+        {classId && statusMeta && (
           <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
         )}
-        {canCompute && (
-          <Button variant="secondary" disabled={actionLoading || sessionLoading} onClick={compute}>
-            {actionLoading ? 'Computing…' : 'Compute from grades'}
-          </Button>
-        )}
         {canSubmit && (
-          <Button disabled={actionLoading} onClick={submit}>
+          <Button disabled={actionLoading || sessionLoading || !classId} onClick={submit}>
             {actionLoading ? 'Submitting…' : 'Submit to admin'}
-          </Button>
-        )}
-        {canApprove && (
-          <Button disabled={actionLoading} onClick={approve}>
-            {actionLoading ? 'Approving…' : 'Approve for parents'}
           </Button>
         )}
       </div>
       {sessionError && !sessionLoading && (
         <Alert tone="info" className="mb-4">
-          No active academic session. Activate a session under Sessions before computing term results.
+          No active academic session. Activate a session under Sessions before submitting results.
         </Alert>
       )}
       {!termId && (
@@ -207,57 +194,58 @@ export function TermResultsPage() {
       )}
       {error && <Alert className="mb-4">{error}</Alert>}
       {msg && <Alert tone="success" className="mb-4">{msg}</Alert>}
-      {canApproveTermResults && (pendingSubmissions?.length ?? 0) > 0 && (
+
+      {canApproveTermResults && (
         <Card className="mb-4">
           <h3 className="font-semibold mb-2">Submitted for review</h3>
           <p className="text-sm text-muted mb-3">
-            Teachers have submitted these class results. Select one to review student averages and approve for parents.
+            Teachers submit results here after entering grades. Review any class, or filter by class above.
           </p>
-          <Table>
-            <thead>
-              <tr>
-                <Th>Class</Th>
-                <Th>Term</Th>
-                <Th>Teacher</Th>
-                <Th>Students</Th>
-                <Th>Submitted</Th>
-                <Th />
-              </tr>
-            </thead>
-            <tbody>
-              {pendingSubmissions.map((item) => (
-                <tr key={item.id} className="border-t border-border">
-                  <Td>{item.className ?? `Class #${item.classId}`}</Td>
-                  <Td>{item.termName ?? `Term #${item.termId}`}</Td>
-                  <Td>{item.submittedByTeacherName ?? '—'}</Td>
-                  <Td>{item.resultCount}</Td>
-                  <Td>{formatDateTime(item.submittedAt)}</Td>
-                  <Td>
-                    <Button
-                      size="sm"
-                      variant={String(item.classId) === classId ? 'primary' : 'secondary'}
-                      onClick={() => reviewSubmission(item.classId)}
-                    >
-                      {String(item.classId) === classId ? 'Reviewing' : 'Review'}
-                    </Button>
-                  </Td>
+          {filteredPending.length === 0 ? (
+            <p className="text-sm text-muted">No class results waiting for review{classId ? ' in this class' : ''}.</p>
+          ) : (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Class</Th>
+                  <Th>Term</Th>
+                  <Th>Teacher</Th>
+                  <Th>Students</Th>
+                  <Th>Submitted</Th>
+                  <Th />
                 </tr>
-              ))}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {filteredPending.map((item) => (
+                  <tr key={item.id} className="border-t border-border">
+                    <Td>{item.className ?? `Class #${item.classId}`}</Td>
+                    <Td>{item.termName ?? `Term #${item.termId}`}</Td>
+                    <Td>{item.submittedByTeacherName ?? '—'}</Td>
+                    <Td>{item.resultCount}</Td>
+                    <Td>{formatDateTime(item.submittedAt)}</Td>
+                    <Td>
+                      <Button
+                        size="sm"
+                        variant={String(item.classId) === classId ? 'primary' : 'secondary'}
+                        onClick={() => reviewSubmission(item.classId)}
+                      >
+                        {String(item.classId) === classId ? 'Reviewing' : 'Review'}
+                      </Button>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
         </Card>
       )}
-      {canApproveTermResults && classId && status !== 'SUBMITTED' && (pendingSubmissions?.length ?? 0) > 0 && (
-        <Alert tone="info" className="mb-4">
-          Pick a class from <strong>Submitted for review</strong> above, or choose a class that has a pending submission.
-        </Alert>
-      )}
+
       {canSubmitTermResults && status === 'SUBMITTED' && (
         <Alert tone="info" className="mb-4">
           Submitted to admin. You will be notified when results are approved for parents.
         </Alert>
       )}
-      {canApproveTermResults && status === 'SUBMITTED' && submission && (
+      {canApproveTermResults && status === 'SUBMITTED' && submission && classId && (
         <Card className="mb-4">
           <h3 className="font-semibold mb-2">Review submission</h3>
           <p className="text-sm text-muted">
@@ -265,103 +253,116 @@ export function TermResultsPage() {
             {' · '}Submitted {formatDateTime(submission.submittedAt)}
           </p>
           <p className="text-sm text-muted mt-1">
-            Open <strong>View full result</strong> on any student to see subject scores and grades before approving.
+            Open <strong>View report</strong> on any student, then use the check to approve for parents or the X to send the class back to the teacher.
           </p>
         </Card>
       )}
-      {loading ? <Loading /> : (
+
+      {!classId && canApproveTermResults ? (
+        <p className="text-sm text-muted">Select a class above or click Review on a submission to see student results.</p>
+      ) : loading ? <Loading /> : (
         <>
           {classId && termId && !data?.length && status !== 'SUBMITTED' && (
             <Alert tone="info" className="mb-4">
-              No results yet. Compute from grades after entering scores for students enrolled in this class for the active session.
+              No results yet. Results appear here after a teacher submits grades for this class.
             </Alert>
           )}
           {classId && termId && !data?.length && status === 'SUBMITTED' && (
             <Alert tone="warning" className="mb-4">
-              Submission received but no student results were found. Ask the teacher to compute results before submitting.
+              Submission received but no student results were found. Ask the teacher to enter grades and submit again.
             </Alert>
           )}
 
-          <Table>
-            <thead>
-              <tr>
-                <Th>Student</Th>
-                <Th>Average</Th>
-                <Th>Rank</Th>
-                <Th>Comments</Th>
-                {canApproveTermResults && <Th>Full result</Th>}
-                {canEditRows && <Th>Actions</Th>}
-                <Th>Parent access</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.map((r) => (
-                <tr key={r.id} className="border-t border-border">
-                  <Td>{studentName(r.studentId)}</Td>
-                  <Td>
-                    {canEditRows ? (
-                      <Input
-                        type="number"
-                        step="0.01"
-                        className="max-w-[100px]"
-                        value={rowEdits[r.id]?.averageScore ?? ''}
-                        onChange={(e) => setRowEdits({
-                          ...rowEdits,
-                          [r.id]: { ...rowEdits[r.id], averageScore: e.target.value },
-                        })}
-                      />
-                    ) : (r.averageScore ?? '—')}
-                  </Td>
-                  <Td>{r.rankInClass ?? '—'}</Td>
-                  <Td>
-                    {canEditRows ? (
-                      <Input
-                        value={rowEdits[r.id]?.comments ?? ''}
-                        onChange={(e) => setRowEdits({
-                          ...rowEdits,
-                          [r.id]: { ...rowEdits[r.id], comments: e.target.value },
-                        })}
-                        placeholder="Comments"
-                      />
-                    ) : (r.comments || '—')}
-                  </Td>
-                  {canApproveTermResults && (
-                    <Td>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setDetailStudentId(r.studentId)}
-                      >
-                        View full result
-                      </Button>
-                    </Td>
-                  )}
-                  {canEditRows && (
-                    <Td>
-                      <Button size="sm" variant="secondary" disabled={savingId === r.id} onClick={() => saveRow(r.id)}>
-                        {savingId === r.id ? 'Saving…' : 'Save'}
-                      </Button>
-                    </Td>
-                  )}
-                  <Td>
-                    {r.publishedAt
-                      ? <Badge tone="success">Approved</Badge>
-                      : <Badge>Pending approval</Badge>}
-                  </Td>
+          {classId && (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Student</Th>
+                  <Th>Full result</Th>
+                  {canApprove && <Th>Actions</Th>}
+                  <Th>Parent access</Th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {data?.map((r) => (
+                  <tr key={r.id} className="border-t border-border">
+                    <Td>{studentName(r.studentId)}</Td>
+                    <Td>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => setDetailStudentId(r.studentId)}
+                        >
+                          View report
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={pdfLoading}
+                          onClick={() => downloadPdf(r.studentId)}
+                        >
+                          PDF
+                        </Button>
+                      </div>
+                    </Td>
+                    {canApprove && (
+                      <Td>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="!px-2 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                            disabled={actionLoading}
+                            title="Approve for parents"
+                            aria-label="Approve for parents"
+                            onClick={approve}
+                          >
+                            <Check size={18} strokeWidth={2.5} />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="!px-2 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            disabled={actionLoading}
+                            title="Send back to teacher"
+                            aria-label="Send back to teacher"
+                            onClick={reject}
+                          >
+                            <X size={18} strokeWidth={2.5} />
+                          </Button>
+                        </div>
+                      </Td>
+                    )}
+                    <Td>
+                      {r.publishedAt
+                        ? <Badge tone="success">Approved</Badge>
+                        : <Badge>Pending approval</Badge>}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
         </>
       )}
       <Modal
         open={detailStudentId != null}
         onClose={() => setDetailStudentId(null)}
-        title="Full term result"
+        title="End of term progress report"
+        className="max-w-5xl"
+        bodyClassName="p-2"
       >
         {detailLoading && <Loading />}
         {detailError && <Alert>{detailError}</Alert>}
         {!detailLoading && !detailError && <ReportCardDetail report={detailReport} />}
+        {detailStudentId && (
+          <div className="mt-3">
+            <Button disabled={pdfLoading} onClick={() => downloadPdf(detailStudentId)}>
+              {pdfLoading ? 'Preparing PDF…' : 'Download PDF'}
+            </Button>
+          </div>
+        )}
       </Modal>
     </div>
   )

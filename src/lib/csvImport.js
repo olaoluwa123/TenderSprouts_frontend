@@ -5,6 +5,8 @@ export const CSV_HEADERS = [
   'class',
   'gender',
   'date_of_birth',
+  'height',
+  'weight',
   'parent_email',
   'parent_full_name',
   'parent_phone',

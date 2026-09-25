@@ -66,24 +66,20 @@ export function ClassDetailPage() {
     }
   }
 
+  const assignedTeachers = data?.teachers?.length
+    ? data.teachers
+    : (data?.teacher ? [data.teacher] : [])
+  const assignedTeacherIds = new Set(assignedTeachers.map((row) => Number(row.id)))
+  const availableTeachers = (teachers ?? []).filter((row) => !assignedTeacherIds.has(Number(row.id)))
+
   const assignTeacher = async () => {
     const tid = Number(teacherId)
     if (!tid) throw new Error('Select a teacher')
-    const currentId = data?.teacher?.id
-    if (currentId === tid) return
-    if (currentId) {
-      await teachersApi.unassignClass(currentId)
-    }
-    const selected = (teachers ?? []).find((t) => t.id === tid)
-    if (selected?.classId && Number(selected.classId) === classId) {
+    if (assignedTeacherIds.has(tid)) {
       setTeacherId('')
       return
     }
-    if (selected?.classId) {
-      await teachersApi.reassignClass(tid, classId)
-    } else {
-      await teachersApi.assignClass(tid, classId)
-    }
+    await teachersApi.assignClass(tid, classId)
     setTeacherId('')
   }
 
@@ -129,7 +125,7 @@ export function ClassDetailPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
         title={data?.name || 'Class'}
-        subtitle="Class profile"
+        subtitle={data?.classGroup === 'PRE_PRIMARY' ? 'Pre-primary' : data?.classGroup === 'PRIMARY' ? 'Primary' : 'Class profile'}
         actions={(
           <Link to="/admin/classes">
             <Button variant="secondary" size="sm"><ArrowLeft size={14} /> All classes</Button>
@@ -143,39 +139,51 @@ export function ClassDetailPage() {
       <Section title="Overview">
         <dl>
           <InfoRow label="Class" value={data.name} />
+          <InfoRow
+            label="Group"
+            value={data.classGroup === 'PRE_PRIMARY' ? 'Pre-primary' : data.classGroup === 'PRIMARY' ? 'Primary' : data.classGroup}
+          />
           <InfoRow label="Pupils" value={String(data.pupilCount ?? 0)} />
           <InfoRow
-            label="Class teacher"
-            value={data.teacher
-              ? [data.teacher.fullName, data.teacher.phone].filter(Boolean).join(' · ')
+            label="Teachers"
+            value={assignedTeachers.length
+              ? assignedTeachers.map((row) => [row.fullName, row.phone].filter(Boolean).join(' · ')).join(' / ')
               : 'Not assigned'}
           />
         </dl>
-        <div className="mt-4 max-w-md space-y-3 rounded-xl border border-brand-100 p-4">
-          <h3 className="text-sm font-semibold text-ink">
-            {data.teacher ? 'Change class teacher' : 'Assign class teacher'}
-          </h3>
-          <TeacherSelect value={teacherId} onChange={setTeacherId} teachers={teachers ?? []} />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              disabled={!teacherId || saving}
-              onClick={() => run(assignTeacher, 'Class teacher updated')}
+        <div className="mt-4 space-y-2">
+          {assignedTeachers.map((row) => (
+            <div
+              key={row.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-100 bg-brand-50-50 px-4 py-3"
             >
-              {saving ? 'Saving…' : data.teacher ? 'Reassign teacher' : 'Assign teacher'}
-            </Button>
-            {data.teacher && (
+              <p className="text-sm font-medium text-ink">
+                {[row.fullName, row.phone].filter(Boolean).join(' · ')}
+              </p>
               <Button
                 variant="danger"
+                size="sm"
                 disabled={saving}
                 onClick={() => run(
-                  () => teachersApi.unassignClass(data.teacher.id),
-                  'Class teacher removed',
+                  () => teachersApi.unassignClass(row.id, classId),
+                  'Teacher removed from class',
                 )}
               >
-                Unassign
+                Remove
               </Button>
-            )}
-          </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 max-w-md space-y-3 rounded-xl border border-brand-100 p-4">
+          <h3 className="text-sm font-semibold text-ink">Add teacher</h3>
+          <p className="text-xs text-muted">More than one teacher can be assigned to this class.</p>
+          <TeacherSelect value={teacherId} onChange={setTeacherId} teachers={availableTeachers} />
+          <Button
+            disabled={!teacherId || saving}
+            onClick={() => run(assignTeacher, 'Teacher assigned')}
+          >
+            {saving ? 'Saving…' : 'Add teacher'}
+          </Button>
         </div>
       </Section>
 
@@ -191,9 +199,7 @@ export function ClassDetailPage() {
           <p className="text-sm text-muted">No subjects yet. Add subjects under Subjects.</p>
         ) : (
           <ul className="space-y-2">
-            {(allSubjects ?? []).filter((s) => s.isActive !== false).map((s) => {
-              const assigned = (data.subjects ?? []).find((x) => x.subjectId === s.id)
-              return (
+            {(allSubjects ?? []).filter((s) => s.isActive !== false).map((s) => (
                 <li key={s.id} className="flex flex-wrap items-center gap-2 text-sm">
                   <input
                     id={`class-subj-${s.id}`}
@@ -202,12 +208,8 @@ export function ClassDetailPage() {
                     onChange={(e) => toggleSubject(s.id, e.target.checked)}
                   />
                   <label htmlFor={`class-subj-${s.id}`}>{s.name}</label>
-                  {assigned?.teacherNames?.length > 0 && (
-                    <span className="text-xs text-muted">· {assigned.teacherNames.join(', ')}</span>
-                  )}
                 </li>
-              )
-            })}
+              ))}
           </ul>
         )}
       </Section>

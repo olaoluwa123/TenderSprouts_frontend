@@ -8,6 +8,7 @@ import {
   SectionHeading,
   Sprout,
 } from '@/components/public/primitives'
+import { PHOTOS } from '@/lib/photos'
 import { SCHOOL } from '@/lib/school'
 
 const VALUES = [
@@ -50,7 +51,12 @@ export function AboutPage() {
       <Section tone="white">
         <div className="grid gap-14 lg:grid-cols-[1fr_1.05fr] lg:gap-20">
           <Reveal>
-            <PhotoPlaceholder label="Our campus" ratio="aspect-[4/5]" />
+            <PhotoPlaceholder
+              src={PHOTOS.campus}
+              alt="Tender Sprouts campus exterior and playground"
+              label="Our campus"
+              ratio="aspect-[4/5]"
+            />
           </Reveal>
           <div>
             <SectionHeading
@@ -129,10 +135,33 @@ export function AboutPage() {
           </div>
 
           <Reveal delay={120} className="grid gap-5 sm:grid-cols-2">
-            <PhotoPlaceholder label="Library" ratio="aspect-[3/4]" />
-            <PhotoPlaceholder label="Play area" ratio="aspect-[3/4]" className="sm:mt-12" />
-            <PhotoPlaceholder label="Qur’an room" ratio="aspect-square" className="sm:-mt-4" />
-            <PhotoPlaceholder label="Science corner" ratio="aspect-square" className="sm:mt-8" />
+            <PhotoPlaceholder
+              src={PHOTOS.reading}
+              alt="Classroom library and reading shelves"
+              label="Library"
+              ratio="aspect-[3/4]"
+            />
+            <PhotoPlaceholder
+              src={PHOTOS.campus}
+              alt="School playground and outdoor play area"
+              label="Play area"
+              ratio="aspect-[3/4]"
+              className="sm:mt-12"
+            />
+            <PhotoPlaceholder
+              src={PHOTOS.groupWork}
+              alt="Early years Qur’an and group-work room"
+              label="Qur’an room"
+              ratio="aspect-square"
+              className="sm:-mt-4"
+            />
+            <PhotoPlaceholder
+              src={PHOTOS.classroomAlt}
+              alt="Primary classroom science and learning corner"
+              label="Science corner"
+              ratio="aspect-square"
+              className="sm:mt-8"
+            />
           </Reveal>
         </div>
       </Section>

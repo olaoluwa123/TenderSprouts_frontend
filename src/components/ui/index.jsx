@@ -80,12 +80,16 @@ export function Card({
 
 export function PageHeader({ title, subtitle, actions }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+      <div className="min-w-0 flex-1">
+        <h1 className="font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && (
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap [&_button]:w-full sm:[&_button]:w-auto">
+          {actions}
+        </div>
+      )}
     </div>
   )
 }
@@ -133,24 +137,28 @@ export function Table({ children }) {
   )
 }
 
-export function Th({ children }) {
-  return <th className="bg-cream/60 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted">{children}</th>
+export function Th({ children, className }) {
+  return (
+    <th className={clsx('bg-cream/60 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted', className)}>
+      {children}
+    </th>
+  )
 }
 
 export function Td({ children, className }) {
   return <td className={clsx('px-4 py-3 text-ink/80', className)}>{children}</td>
 }
 
-export function Modal({ open, onClose, title, children }) {
+export function Modal({ open, onClose, title, children, className, bodyClassName }) {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-xl shadow-blossom-500/10">
+      <div className={clsx('max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white shadow-xl shadow-blossom-500/10', className || 'max-w-lg')}>
         <div className="flex items-center justify-between border-b border-blossom-100 px-5 py-4">
           <h2 className="font-display text-lg font-semibold text-ink">{title}</h2>
           <button type="button" onClick={onClose} className="cursor-pointer text-muted hover:text-ink">✕</button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className={clsx('p-5', bodyClassName)}>{children}</div>
       </div>
     </div>
   )

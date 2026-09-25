@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@/context/AuthContext'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
@@ -22,7 +22,6 @@ import { UsersPage } from '@/pages/admin/UsersPage'
 import { CalendarPage } from '@/pages/admin/CalendarPage'
 import { AnnouncementsPage } from '@/pages/admin/AnnouncementsPage'
 import { AttendancePage } from '@/pages/admin/AttendancePage'
-import { ReportsPage } from '@/pages/admin/ReportsPage'
 import { StudentsPage } from '@/pages/admin/StudentsPage'
 import { PupilDetailPage } from '@/pages/admin/PupilDetailPage'
 import { ParentsPage } from '@/pages/admin/ParentsPage'
@@ -33,6 +32,7 @@ import { ClassesPage } from '@/pages/admin/ClassesPage'
 import { ClassDetailPage } from '@/pages/admin/ClassDetailPage'
 import { SubjectsPage } from '@/pages/admin/SubjectsPage'
 import { FeesPage } from '@/pages/admin/FeesPage'
+import { FeeBalancesPage } from '@/pages/admin/FeeBalancesPage'
 import { TeachersPage } from '@/pages/admin/TeachersPage'
 import { TeacherDetailPage } from '@/pages/admin/TeacherDetailPage'
 import { GradesPage } from '@/pages/admin/GradesPage'
@@ -41,6 +41,7 @@ import { TermResultsPage } from '@/pages/admin/TermResultsPage'
 import { ExamTimetablePage } from '@/pages/admin/ExamTimetablePage'
 import { ParentDashboard } from '@/pages/parent/ParentDashboard'
 import { ChildrenPage } from '@/pages/parent/ChildrenPage'
+import { ChildProfilePage } from '@/pages/parent/ChildProfilePage'
 import { ReportCardsPage } from '@/pages/parent/ReportCardsPage'
 import { ParentFeesPage } from '@/pages/parent/ParentFeesPage'
 import { ParentAnnouncementsPage } from '@/pages/parent/ParentAnnouncementsPage'
@@ -53,8 +54,12 @@ import { TeacherSubjectsPage } from '@/pages/teacher/TeacherSubjectsPage'
 import { TeacherAttendancePage } from '@/pages/teacher/TeacherAttendancePage'
 import { TeacherAnnouncementsPage } from '@/pages/teacher/TeacherAnnouncementsPage'
 import { TeacherActivitiesPage } from '@/pages/teacher/TeacherActivitiesPage'
-import { TeacherAssignmentsPage } from '@/pages/teacher/TeacherAssignmentsPage'
 import { TeacherTimetablePage } from '@/pages/teacher/TeacherTimetablePage'
+import { TeacherReportsHubPage } from '@/pages/teacher/TeacherReportsHubPage'
+import { PreschoolReportPage } from '@/pages/teacher/PreschoolReportPage'
+import { BehaviouralReportPage } from '@/pages/teacher/BehaviouralReportPage'
+import { WeeklyTestResultPage } from '@/pages/teacher/WeeklyTestResultPage'
+import { MidtermReportPage } from '@/pages/teacher/MidtermReportPage'
 import { ApiStatusBanner } from '@/components/ApiStatusBanner'
 
 const queryClient = new QueryClient()
@@ -89,8 +94,9 @@ export default function App() {
                 <Route path="/admin/calendar" element={<CalendarPage />} />
                 <Route path="/admin/announcements" element={<AnnouncementsPage />} />
                 <Route path="/admin/fees" element={<FeesPage />} />
+                <Route path="/admin/fees/owing" element={<FeeBalancesPage mode="owing" />} />
+                <Route path="/admin/fees/paid" element={<FeeBalancesPage mode="paid" />} />
                 <Route path="/admin/attendance" element={<AttendancePage />} />
-                <Route path="/admin/reports" element={<ReportsPage />} />
                 <Route path="/admin/students" element={<StudentsPage />} />
                 <Route path="/admin/students/:id" element={<PupilDetailPage />} />
                 <Route path="/admin/parents" element={<ParentsPage />} />
@@ -118,8 +124,13 @@ export default function App() {
                 <Route path="/teacher/announcements" element={<TeacherAnnouncementsPage />} />
                 <Route path="/teacher/timetable" element={<TeacherTimetablePage />} />
                 <Route path="/teacher/activities" element={<TeacherActivitiesPage />} />
-                <Route path="/teacher/assignments" element={<TeacherAssignmentsPage />} />
-                <Route path="/teacher/grades" element={<GradesPage />} />
+                <Route path="/teacher/reports" element={<TeacherReportsHubPage />} />
+                <Route path="/teacher/reports/end-of-term-grades" element={<GradesPage />} />
+                <Route path="/teacher/reports/behavioural" element={<BehaviouralReportPage />} />
+                <Route path="/teacher/reports/weekly-tests" element={<WeeklyTestResultPage />} />
+                <Route path="/teacher/reports/preschool" element={<PreschoolReportPage />} />
+                <Route path="/teacher/reports/midterm" element={<MidtermReportPage />} />
+                <Route path="/teacher/grades" element={<Navigate to="/teacher/reports/end-of-term-grades" replace />} />
                 <Route path="/teacher/term-results" element={<TermResultsPage />} />
                 <Route path="/teacher/exam-timetable" element={<ExamTimetablePage />} />
                 <Route path="/teacher/parents" element={<ParentsPage readOnly />} />
@@ -130,9 +141,11 @@ export default function App() {
               <Route element={<AppLayout />}>
                 <Route path="/parent" element={<ParentDashboard />} />
                 <Route path="/parent/children" element={<ChildrenPage />} />
+                <Route path="/parent/children/:id" element={<ChildProfilePage />} />
                 <Route path="/parent/fees" element={<ParentFeesPage />} />
                 <Route path="/parent/attendance" element={<ParentAttendancePage />} />
                 <Route path="/parent/results" element={<ReportCardsPage />} />
+                <Route path="/parent/exam-timetable" element={<ExamTimetablePage />} />
                 <Route path="/parent/announcements" element={<ParentAnnouncementsPage />} />
                 <Route path="/parent/calendar" element={<ParentCalendarPage />} />
                 <Route path="/parent/profile" element={<ParentProfilePage />} />

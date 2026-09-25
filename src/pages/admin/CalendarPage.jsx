@@ -104,23 +104,6 @@ export function CalendarPage() {
     }
   }
 
-  const daysInMonth = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0).getDate()
-  const firstWeekday = new Date(anchor.getFullYear(), anchor.getMonth(), 1).getDay()
-  const eventsByDay = useMemo(() => {
-    const map = {}
-    for (const event of events ?? []) {
-      const start = new Date(event.startDate)
-      const end = new Date(event.endDate || event.startDate)
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        if (d.getMonth() !== anchor.getMonth() || d.getFullYear() !== anchor.getFullYear()) continue
-        const key = d.getDate()
-        if (!map[key]) map[key] = []
-        map[key].push(event)
-      }
-    }
-    return map
-  }, [events, anchor])
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -149,75 +132,43 @@ export function CalendarPage() {
       {formError && !open && <Alert>{formError}</Alert>}
 
       {loading ? <Loading /> : (
-        <>
-          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium uppercase tracking-wide text-muted">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <div key={d} className="py-2">{d}</div>)}
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {Array.from({ length: firstWeekday }).map((_, i) => (
-              <div key={`pad-${i}`} className="min-h-20 rounded-xl bg-transparent" />
-            ))}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1
-              const dayEvents = eventsByDay[day] || []
-              return (
-                <div key={day} className="min-h-20 rounded-xl border border-brand-100 bg-white p-2 text-left">
-                  <p className="text-xs font-semibold text-ink">{day}</p>
-                  <ul className="mt-1 space-y-0.5">
-                    {dayEvents.slice(0, 3).map((ev) => (
-                      <li key={`${ev.id}-${day}`}>
-                        <button
-                          type="button"
-                          className="w-full truncate rounded bg-brand-50 px-1 py-0.5 text-left text-[10px] text-brand-800"
-                          onClick={() => openEdit(ev)}
-                        >
-                          {ev.title}
-                        </button>
-                      </li>
-                    ))}
-                    {dayEvents.length > 3 && (
-                      <li className="text-[10px] text-muted">+{dayEvents.length - 3} more</li>
-                    )}
-                  </ul>
-                </div>
-              )
-            })}
-          </div>
-
-          <div>
-            <h2 className="mb-3 font-display text-lg font-semibold text-ink">Events this month</h2>
-            <Table>
-              <thead>
+        <div>
+          <h2 className="mb-3 font-display text-lg font-semibold text-ink">Events this month</h2>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Title</Th>
+                <Th>Type</Th>
+                <Th>Dates</Th>
+                <Th>Class</Th>
+                <Th>Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {(events ?? []).length === 0 ? (
                 <tr>
-                  <Th>Title</Th>
-                  <Th>Type</Th>
-                  <Th>Dates</Th>
-                  <Th>Class</Th>
-                  <Th>Actions</Th>
+                  <Td colSpan={5} className="text-muted">No school events this month.</Td>
                 </tr>
-              </thead>
-              <tbody>
-                {(events ?? []).map((ev) => (
-                  <tr key={ev.id} className="border-t border-border">
-                    <Td>{ev.title}</Td>
-                    <Td>{ev.eventType}</Td>
-                    <Td>
-                      {ev.startDate}
-                      {ev.endDate && ev.endDate !== ev.startDate ? ` – ${ev.endDate}` : ''}
-                    </Td>
-                    <Td>{ev.className || '—'}</Td>
-                    <Td>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="secondary" onClick={() => openEdit(ev)}>Edit</Button>
-                        <Button size="sm" variant="danger" onClick={() => handleDelete(ev.id)}>Delete</Button>
-                      </div>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
-        </>
+              ) : (events ?? []).map((ev) => (
+                <tr key={ev.id} className="border-t border-border">
+                  <Td>{ev.title}</Td>
+                  <Td>{ev.eventType}</Td>
+                  <Td>
+                    {ev.startDate}
+                    {ev.endDate && ev.endDate !== ev.startDate ? ` – ${ev.endDate}` : ''}
+                  </Td>
+                  <Td>{ev.className || '—'}</Td>
+                  <Td>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => openEdit(ev)}>Edit</Button>
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(ev.id)}>Delete</Button>
+                    </div>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
       )}
 
       <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Edit event' : 'Add event'}>

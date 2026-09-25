@@ -1,20 +1,22 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   BookOpen,
   Calendar,
   CalendarDays,
   ClipboardCheck,
   ClipboardList,
-  FileBarChart,
   GraduationCap,
   LayoutDashboard,
   LogOut,
   Megaphone,
+  Menu,
   MessageSquareText,
   School,
   Settings,
   Users,
   Wallet,
+  X,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/hooks/useAuth'
@@ -25,13 +27,11 @@ import { PortalGreeting } from '@/components/layout/PortalGreeting'
 const adminNav = [
   { to: '/admin', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
   { to: '/admin/admission-enquiries', label: 'Admission Enquiries', icon: <MessageSquareText size={18} /> },
-  { to: '/admin/activity', label: 'Activity', icon: <ClipboardList size={18} /> },
   { to: '/admin/users', label: 'Users', icon: <Settings size={18} /> },
   { to: '/admin/calendar', label: 'Calendar', icon: <CalendarDays size={18} /> },
   { to: '/admin/announcements', label: 'Announcements', icon: <Megaphone size={18} /> },
   { to: '/admin/fees', label: 'School Fees', icon: <Wallet size={18} /> },
   { to: '/admin/attendance', label: 'Attendance', icon: <ClipboardCheck size={18} /> },
-  { to: '/admin/reports', label: 'Reports', icon: <FileBarChart size={18} /> },
   { to: '/admin/students', label: 'Pupil Management', icon: <Users size={18} /> },
   { to: '/admin/parents', label: 'Parents', icon: <Users size={18} /> },
   { to: '/admin/enrollments', label: 'Promote Pupils', icon: <GraduationCap size={18} /> },
@@ -41,8 +41,9 @@ const adminNav = [
   { to: '/admin/teachers', label: 'Teachers', icon: <GraduationCap size={18} /> },
   { to: '/admin/assessment-types', label: 'Assessment Types', icon: <Settings size={18} /> },
   { to: '/admin/grades', label: 'Grades', icon: <ClipboardList size={18} /> },
-  { to: '/admin/term-results', label: 'Term Results', icon: <BookOpen size={18} /> },
+  { to: '/admin/term-results', label: 'Review Results', icon: <BookOpen size={18} /> },
   { to: '/admin/exam-timetable', label: 'Exam Timetable', icon: <Calendar size={18} /> },
+  { to: '/admin/activity', label: 'Activity log', icon: <ClipboardList size={18} /> },
 ]
 
 const teacherNav = [
@@ -51,8 +52,7 @@ const teacherNav = [
   { to: '/teacher/subjects', label: 'Subjects', icon: <BookOpen size={18} /> },
   { to: '/teacher/attendance', label: 'Attendance', icon: <ClipboardCheck size={18} /> },
   { to: '/teacher/term-results', label: 'Results', icon: <GraduationCap size={18} /> },
-  { to: '/teacher/grades', label: 'Grades', icon: <ClipboardList size={18} /> },
-  { to: '/teacher/assignments', label: 'Assignments', icon: <ClipboardList size={18} /> },
+  { to: '/teacher/reports', label: 'Reports', icon: <ClipboardList size={18} /> },
   { to: '/teacher/announcements', label: 'Announcements', icon: <Megaphone size={18} /> },
   { to: '/teacher/timetable', label: 'My Timetable', icon: <Calendar size={18} /> },
   { to: '/teacher/activities', label: 'Calendar', icon: <CalendarDays size={18} /> },
@@ -66,7 +66,8 @@ const parentNav = [
   { to: '/parent/attendance', label: 'Attendance', icon: <ClipboardCheck size={18} /> },
   { to: '/parent/announcements', label: 'Announcements', icon: <Megaphone size={18} /> },
   { to: '/parent/calendar', label: 'Calendar', icon: <CalendarDays size={18} /> },
-  { to: '/parent/results', label: 'Report Card', icon: <GraduationCap size={18} /> },
+  { to: '/parent/results', label: 'Reports', icon: <GraduationCap size={18} /> },
+  { to: '/parent/exam-timetable', label: 'Exam Timetable', icon: <Calendar size={18} /> },
   { to: '/parent/fees', label: 'School Fees', icon: <Wallet size={18} /> },
   { to: '/parent/profile', label: 'Settings', icon: <Settings size={18} /> },
 ]
@@ -81,7 +82,27 @@ function navForRole(role) {
 export function AppLayout() {
   const { user, logout, role } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const items = role ? navForRole(role) : []
+  const [navOpen, setNavOpen] = useState(false)
+
+  useEffect(() => {
+    setNavOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!navOpen) return undefined
+    const onKey = (e) => {
+      if (e.key === 'Escape') setNavOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [navOpen])
 
   const handleLogout = async () => {
     await logout()
@@ -90,12 +111,34 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen bg-surface">
-      <aside className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-blossom-200 bg-white">
-        <div className="border-b border-blossom-100 px-4 py-2.5">
-          <div className="flex flex-col items-center text-center">
-            <img src={SCHOOL.logo} alt={SCHOOL.name} className="h-12 w-auto" />
+      {navOpen && (
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="fixed inset-0 z-30 bg-ink/40 md:hidden"
+          onClick={() => setNavOpen(false)}
+        />
+      )}
+
+      <aside
+        className={clsx(
+          'fixed inset-y-0 left-0 z-40 flex w-[min(16rem,85vw)] flex-col border-r border-blossom-200 bg-white transition-transform duration-200 ease-out md:w-64 md:translate-x-0',
+          navOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
+        <div className="flex items-start justify-between gap-2 border-b border-blossom-100 px-4 py-2.5">
+          <div className="flex min-w-0 flex-1 flex-col items-center text-center">
+            <img src={SCHOOL.logo} alt={SCHOOL.name} className="h-12 w-auto max-w-full" />
             <p className="mt-0.5 text-[11px] font-medium leading-tight text-brand-600">{roleLabel(role)}</p>
           </div>
+          <button
+            type="button"
+            className="mt-1 shrink-0 rounded-lg p-1.5 text-muted hover:bg-blossom-50 hover:text-ink md:hidden"
+            aria-label="Close navigation"
+            onClick={() => setNavOpen(false)}
+          >
+            <X size={20} />
+          </button>
         </div>
         <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
           {items.map((item) => (
@@ -113,7 +156,7 @@ export function AppLayout() {
               }
             >
               {item.icon}
-              {item.label}
+              <span className="min-w-0 truncate">{item.label}</span>
             </NavLink>
           ))}
         </nav>
@@ -121,6 +164,7 @@ export function AppLayout() {
           <p className="truncate text-xs font-medium text-ink">{roleLabel(role)}</p>
           <p className="truncate text-xs text-muted">User #{user?.userId}</p>
           <button
+            type="button"
             onClick={handleLogout}
             className="mt-2 flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm text-ink/70 transition-colors hover:bg-white hover:text-blossom-700"
           >
@@ -128,9 +172,27 @@ export function AppLayout() {
           </button>
         </div>
       </aside>
-      <main className="ml-64 flex-1 p-8">
-        <PortalGreeting />
-        <Outlet />
+
+      <main className="min-w-0 flex-1 md:ml-64">
+        <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-blossom-100 bg-surface/95 px-4 py-3 backdrop-blur md:hidden">
+          <button
+            type="button"
+            className="rounded-xl border border-blossom-200 bg-white p-2 text-ink shadow-sm"
+            aria-label="Open navigation"
+            aria-expanded={navOpen}
+            onClick={() => setNavOpen(true)}
+          >
+            <Menu size={20} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-ink">{SCHOOL.name}</p>
+            <p className="truncate text-xs text-muted">{roleLabel(role)}</p>
+          </div>
+        </div>
+        <div className="p-4 sm:p-6 md:p-8">
+          <PortalGreeting />
+          <Outlet />
+        </div>
       </main>
     </div>
   )

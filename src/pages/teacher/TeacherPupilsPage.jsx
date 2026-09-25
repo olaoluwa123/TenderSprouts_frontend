@@ -1,18 +1,26 @@
+import { useState } from 'react'
 import { studentsApi, teachersApi } from '@/api'
 import { useAuth } from '@/hooks/useAuth'
 import { useAsync } from '@/hooks/useAsync'
-import { Alert, Badge, Loading, PageHeader, Table, Td, Th } from '@/components/ui'
+import { ClassSelect } from '@/components/ui/SchoolSelects'
+import { Alert, Badge, Field, Loading, PageHeader, Table, Td, Th } from '@/components/ui'
 
 export function TeacherPupilsPage() {
   const { user } = useAuth()
   const teacherId = user?.profileId
+  const [classId, setClassId] = useState('')
   const { data: assignments, loading: loadingClasses } = useAsync(
     () => (teacherId ? teachersApi.classes(teacherId) : Promise.resolve([])),
     [teacherId],
   )
   const classes = assignments ?? []
-  const effectiveClassId = classes[0]?.classId ? String(classes[0].classId) : ''
-  const className = classes[0]?.className || null
+  const classOptions = classes.map((row) => ({
+    id: row.classId,
+    name: row.className || `Class #${row.classId}`,
+  }))
+  const effectiveClassId = classId || (classes[0]?.classId ? String(classes[0].classId) : '')
+  const selectedClass = classes.find((row) => String(row.classId) === String(effectiveClassId))
+  const className = selectedClass?.className || null
 
   const { data, loading, error } = useAsync(
     () => (effectiveClassId
@@ -26,6 +34,18 @@ export function TeacherPupilsPage() {
       <PageHeader title="Pupils" subtitle={className ? `Roster · ${className}` : 'Pupils in your class'} />
       {!teacherId && <Alert>Teacher profile missing.</Alert>}
       {error && <Alert>{error}</Alert>}
+      {classOptions.length > 1 && (
+        <div className="mb-4 max-w-xs">
+          <Field label="Class">
+            <ClassSelect
+              value={effectiveClassId}
+              onChange={setClassId}
+              classes={classOptions}
+              alwaysShow
+            />
+          </Field>
+        </div>
+      )}
       {(loading || loadingClasses) ? <Loading /> : (
         <Table>
           <thead>

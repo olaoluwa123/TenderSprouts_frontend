@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { studentsApi } from '@/api'
+import { ReportCardDetail } from '@/components/ReportCardDetail'
 import { useAsync } from '@/hooks/useAsync'
+import { bandClassName, toPerformanceBand } from '@/lib/performanceBand'
+import { ageYearsFromDob, displayAge, formatAge, formatSex } from '@/lib/studentProfile'
 import { Alert, Badge, Button, Field, Input, Loading, Modal, PageHeader, Select, Table, Td, Textarea, Th } from '@/components/ui'
 
 function InfoRow({ label, value }) {
@@ -29,14 +32,22 @@ function Section({ title, children, action }) {
 export function PupilDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [editOpen, setEditOpen] = useState(false)
+  const [reportTermId, setReportTermId] = useState(null)
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const [form, setForm] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
   const { data, loading, error, reload } = useAsync(
     () => studentsApi.profile(Number(id)),
     [id],
   )
-  const [editOpen, setEditOpen] = useState(false)
-  const [form, setForm] = useState(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState(null)
+  const { data: report, loading: reportLoading, error: reportError } = useAsync(
+    () => reportTermId
+      ? studentsApi.reportCard(Number(id), reportTermId)
+      : Promise.resolve(null),
+    [id, reportTermId],
+  )
 
   const openEdit = () => {
     if (!data) return
@@ -45,6 +56,8 @@ export function PupilDetailPage() {
       lastName: data.lastName || '',
       gender: data.gender || 'MALE',
       dateOfBirth: data.dateOfBirth || '',
+      height: data.height || '',
+      weight: data.weight || '',
       isActive: data.isActive !== false,
       address: data.address || '',
       medicalInformation: data.medicalInformation || '',
@@ -63,6 +76,8 @@ export function PupilDetailPage() {
         lastName: form.lastName,
         gender: form.gender,
         dateOfBirth: form.dateOfBirth || undefined,
+        height: form.height?.trim() || null,
+        weight: form.weight?.trim() || null,
         isActive: form.isActive,
         address: form.address,
         medicalInformation: form.medicalInformation,
@@ -110,7 +125,10 @@ export function PupilDetailPage() {
         <dl>
           <InfoRow label="Name" value={fullName} />
           <InfoRow label="Date of Birth" value={data.dateOfBirth} />
-          <InfoRow label="Gender" value={data.gender} />
+          <InfoRow label="Age" value={displayAge(data)} />
+          <InfoRow label="Sex" value={formatSex(data.gender)} />
+          <InfoRow label="Height" value={data.height} />
+          <InfoRow label="Weight" value={data.weight} />
           <InfoRow label="Admission Number" value={data.admissionNumber} />
           <InfoRow label="Class" value={data.className} />
           <InfoRow label="Session" value={data.sessionName} />
@@ -144,27 +162,63 @@ export function PupilDetailPage() {
                     <Th>Session</Th>
                     <Th>Class</Th>
                     <Th>Average</Th>
-                    <Th>Grade</Th>
+                    <Th>Band</Th>
                     <Th>Rank</Th>
                     <Th>Status</Th>
+                    <Th />
                   </tr>
                 </thead>
                 <tbody>
-                  {data.results.map((r) => (
+                  {data.results.map((r) => {
+                    const band = toPerformanceBand(r.averageScore)
+                    return (
                     <tr key={r.termResultId} className="border-t border-border">
                       <Td>{r.termName}</Td>
                       <Td>{r.sessionName}</Td>
                       <Td>{r.className}</Td>
                       <Td className="tabular-nums">{r.averageScore != null ? Number(r.averageScore).toFixed(1) : '—'}</Td>
-                      <Td>{r.letterGrade || '—'}</Td>
+                      <Td>
+                        {band
+                          ? <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${bandClassName(band)}`}>{band}</span>
+                          : '—'}
+                      </Td>
                       <Td className="tabular-nums">{r.rankInClass ?? '—'}</Td>
                       <Td>
                         <Badge tone={r.published ? 'success' : 'default'}>
                           {r.published ? 'Published' : 'Draft'}
                         </Badge>
                       </Td>
+                      <Td>
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="secondary" onClick={() => setReportTermId(r.termId)}>
+                            View report
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={pdfLoading}
+                            onClick={async () => {
+                              setPdfLoading(true)
+                              try {
+                                const blob = await studentsApi.reportCardPdf(Number(id), r.termId)
+                                const url = URL.createObjectURL(blob)
+                                const a = document.createElement('a')
+                                a.href = url
+                                a.download = `tender-sprouts-report-${fullName.replace(/\s+/g, '-')}.pdf`
+                                a.click()
+                                URL.revokeObjectURL(url)
+                              } finally {
+                                setPdfLoading(false)
+                              }
+                            }}
+                          >
+                            PDF
+                          </Button>
+                        </div>
+                      </Td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </Table>
             )}
@@ -239,6 +293,18 @@ export function PupilDetailPage() {
         </div>
       </Section>
 
+      <Modal
+        open={reportTermId != null}
+        onClose={() => setReportTermId(null)}
+        title="End of term progress report"
+        className="max-w-5xl"
+        bodyClassName="p-2"
+      >
+        {reportLoading && <Loading />}
+        {reportError && <Alert>{reportError}</Alert>}
+        {!reportLoading && !reportError && <ReportCardDetail report={report} />}
+      </Modal>
+
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit pupil">
         {form && (
           <form onSubmit={handleSave} className="space-y-3">
@@ -249,7 +315,7 @@ export function PupilDetailPage() {
             <Field label="Last name">
               <Input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required />
             </Field>
-            <Field label="Gender">
+            <Field label="Sex">
               <Select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
                 <option value="MALE">Male</option>
                 <option value="FEMALE">Female</option>
@@ -257,6 +323,15 @@ export function PupilDetailPage() {
             </Field>
             <Field label="Date of birth">
               <Input type="date" value={form.dateOfBirth || ''} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} />
+            </Field>
+            <Field label="Age">
+              <Input value={formatAge(ageYearsFromDob(form.dateOfBirth)) || '—'} disabled />
+            </Field>
+            <Field label="Height">
+              <Input value={form.height} onChange={(e) => setForm({ ...form, height: e.target.value })} placeholder="e.g. 1.20m" />
+            </Field>
+            <Field label="Weight">
+              <Input value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} placeholder="e.g. 24kg" />
             </Field>
             <Field label="Address">
               <Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} rows={2} />

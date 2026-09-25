@@ -47,7 +47,7 @@ export function PortalGreeting() {
 
   return (
     <div className="mb-6">
-      <p className="font-display text-2xl font-semibold tracking-tight text-ink">
+      <p className="font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl">
         {greetingForHour()}, {name}
       </p>
       <p className="mt-1 text-sm text-muted">{formatLongDate()}</p>

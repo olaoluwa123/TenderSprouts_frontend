@@ -3,6 +3,35 @@ import { sessionsApi } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { Badge, Button, Card, Field, Input, Loading, Modal, PageHeader } from '@/components/ui'
 
+const TERM_ORDER = ['First Term', 'Second Term', 'Third Term']
+
+function termOrder(name) {
+  const index = TERM_ORDER.indexOf(name)
+  return index === -1 ? TERM_ORDER.length : index
+}
+
+function sessionIsPast(session, activeSession) {
+  if (!activeSession || session.isActive) return false
+  const sessionStart = session.startDate || ''
+  const activeStart = activeSession.startDate || ''
+  if (sessionStart && activeStart) {
+    if (sessionStart < activeStart) return true
+    if (sessionStart > activeStart) return false
+  }
+  return Number(session.id) < Number(activeSession.id)
+}
+
+function canActivateSession(session, activeSession) {
+  return !session.isActive && !sessionIsPast(session, activeSession)
+}
+
+function canActivateTerm(term, terms, viewingActiveSession) {
+  if (!viewingActiveSession || term.isActive) return false
+  const activeTerm = terms.find((t) => t.isActive)
+  if (!activeTerm) return true
+  return termOrder(term.name) > termOrder(activeTerm.name)
+}
+
 export function SessionsPage() {
   const { data, loading, reload } = useAsync(() => sessionsApi.list({ size: 50 }).then((p) => p.content), [])
   const [open, setOpen] = useState(false)
@@ -62,7 +91,9 @@ export function SessionsPage() {
               <p className="mt-1 text-sm text-muted">{s.startDate} → {s.endDate}</p>
               <div className="mt-3 flex gap-2">
                 <Button size="sm" variant="secondary" onClick={() => loadTerms(s.id)}>View terms</Button>
-                {!s.isActive && <Button size="sm" onClick={() => activateSession(s.id)}>Activate</Button>}
+                {canActivateSession(s, activeSession) && (
+                  <Button size="sm" onClick={() => activateSession(s.id)}>Activate</Button>
+                )}
               </div>
             </Card>
           ))}
@@ -85,7 +116,7 @@ export function SessionsPage() {
               <li key={t.id} className="flex items-center gap-2">
                 <span>{t.name}</span>
                 {t.isActive && <Badge tone="success">Active</Badge>}
-                {activeSession?.id === selected && !t.isActive && (
+                {canActivateTerm(t, terms, activeSession?.id === selected) && (
                   <Button
                     size="sm"
                     disabled={termActionId === t.id}

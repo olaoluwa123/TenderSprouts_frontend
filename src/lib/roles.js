@@ -56,7 +56,7 @@ export function permissionsForRole(role) {
     canSubmitTermResults: r === ROLES.TEACHER,
     canApproveTermResults: r === ROLES.ADMIN,
     canPublishTermResults: r === ROLES.ADMIN,
-    canPublishExamTimetable: r === ROLES.ADMIN,
+    canPublishExamTimetable: r === ROLES.ADMIN || r === ROLES.TEACHER,
     canManageExamTimetable: r === ROLES.ADMIN || r === ROLES.TEACHER,
     canEnterGrades: r === ROLES.ADMIN || r === ROLES.TEACHER,
     usesParentStudentView: r === ROLES.PARENT,

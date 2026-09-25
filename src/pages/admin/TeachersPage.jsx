@@ -123,10 +123,13 @@ export function TeachersPage() {
     if (!importFile) return
     setImporting(true)
     setParseError(null)
+    setImportResult(null)
     try {
       const result = await teachersApi.importCsv(importFile)
       setImportResult(result)
-      if (result.successCount > 0) {
+      if (result.status === 'FAILED') {
+        setParseError(result.errorMessage || 'Import failed')
+      } else if (result.successCount > 0) {
         setMsg(`Imported ${result.successCount} teacher${result.successCount === 1 ? '' : 's'}`)
         reload()
       }
@@ -178,7 +181,11 @@ export function TeachersPage() {
                 <Td>{t.fullName}</Td>
                 <Td>{t.email || '—'}</Td>
                 <Td>{t.phone || '—'}</Td>
-                <Td>{t.className || '—'}</Td>
+                <Td>
+                  {(t.classes ?? []).map((row) => row.className).filter(Boolean).join(' / ')
+                    || t.className
+                    || '—'}
+                </Td>
                 <Td>
                   <Badge tone={t.loginActive === false ? 'danger' : 'success'}>
                     {t.loginActive === false ? 'Disabled' : 'Active'}
@@ -272,7 +279,10 @@ export function TeachersPage() {
             />
           </Field>
           {parseError && <Alert>{parseError}</Alert>}
-          {importResult && (
+          {importing && (
+            <Alert tone="info">Import queued — saving teachers…</Alert>
+          )}
+          {importResult && importResult.status !== 'FAILED' && (
             <Alert tone={importResult.failureCount > 0 ? undefined : 'success'}>
               Imported {importResult.successCount} of {importResult.totalRows} rows
               {importResult.failureCount > 0 ? ` (${importResult.failureCount} failed)` : ''}.

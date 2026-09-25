@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
-import { classesApi, teachersApi } from '@/api'
+import { teachersApi } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
-import { useClasses, useSubjects } from '@/hooks/useSchoolData'
+import { useClasses } from '@/hooks/useSchoolData'
 import { ClassSelect } from '@/components/ui/SchoolSelects'
 import { Alert, Button, Field, Input, Loading, Modal, PageHeader, Select, Table, Td, Th } from '@/components/ui'
 
@@ -46,7 +46,6 @@ export function TeacherDetailPage() {
   const navigate = useNavigate()
   const teacherId = Number(id)
   const { data: classes } = useClasses()
-  const { data: allSubjects } = useSubjects()
   const { data, loading, error, reload } = useAsync(
     () => teachersApi.profile(teacherId),
     [teacherId],
@@ -62,11 +61,10 @@ export function TeacherDetailPage() {
   const [actionError, setActionError] = useState(null)
   const [msg, setMsg] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [subjectDraft, setSubjectDraft] = useState({})
-  const [curriculumByClass, setCurriculumByClass] = useState({})
 
   const assignedClasses = data?.classes ?? []
-  const currentClass = assignedClasses[0] ?? null
+  const assignedClassIds = new Set(assignedClasses.map((row) => Number(row.classId)))
+  const availableClasses = (classes ?? []).filter((row) => !assignedClassIds.has(Number(row.id)))
   const timetableRows = useMemo(() => {
     const list = Array.isArray(timetable) ? timetable : []
     return list.slice().sort((a, b) => {
@@ -75,41 +73,6 @@ export function TeacherDetailPage() {
       return String(a.startTime || '').localeCompare(String(b.startTime || ''))
     })
   }, [timetable])
-
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      const next = {}
-      for (const cls of assignedClasses) {
-        try {
-          next[cls.classId] = await classesApi.subjects(cls.classId)
-        } catch {
-          next[cls.classId] = []
-        }
-      }
-      if (!cancelled) setCurriculumByClass(next)
-    }
-    if (assignedClasses.length) load()
-    else setCurriculumByClass({})
-    return () => { cancelled = true }
-  }, [assignedClasses.map((c) => c.classId).join(',')])
-
-  useEffect(() => {
-    if (!data) return
-    const draft = {}
-    for (const cls of data.classes ?? []) {
-      const assigned = new Set(
-        (data.subjects ?? [])
-          .filter((s) => s.classId === cls.classId)
-          .map((s) => s.subjectId),
-      )
-      draft[cls.classId] = assigned
-    }
-    setSubjectDraft(draft)
-  }, [data])
-
-  const subjectName = (subjectId) =>
-    allSubjects?.find((s) => s.id === subjectId)?.name || `Subject #${subjectId}`
 
   const openEdit = () => {
     if (!data) return
@@ -158,52 +121,10 @@ export function TeacherDetailPage() {
     }
   }
 
-  const assignOrReassign = async () => {
+  const addClass = async () => {
     const cid = Number(classId)
-    if (currentClass) {
-      await teachersApi.reassignClass(teacherId, cid)
-      return
-    }
+    if (!cid) throw new Error('Select a class')
     await teachersApi.assignClass(teacherId, cid)
-  }
-
-  const toggleSubject = (clsId, subjectId, checked) => {
-    setSubjectDraft((prev) => {
-      const next = new Set(prev[clsId] ?? [])
-      if (checked) next.add(subjectId)
-      else next.delete(subjectId)
-      return { ...prev, [clsId]: next }
-    })
-  }
-
-  const saveSubjectsForClass = async (clsId) => {
-    setActionError(null)
-    setMsg(null)
-    setSaving(true)
-    try {
-      const desired = subjectDraft[clsId] ?? new Set()
-      const current = new Set(
-        (data.subjects ?? [])
-          .filter((s) => s.classId === clsId)
-          .map((s) => s.subjectId),
-      )
-      for (const subjectId of desired) {
-        if (!current.has(subjectId)) {
-          await teachersApi.assignSubject(teacherId, clsId, subjectId)
-        }
-      }
-      for (const subjectId of current) {
-        if (!desired.has(subjectId)) {
-          await teachersApi.unassignSubject(teacherId, clsId, subjectId)
-        }
-      }
-      setMsg('Subjects updated')
-      reload()
-    } catch (err) {
-      setActionError(err?.message || 'Could not update subjects')
-    } finally {
-      setSaving(false)
-    }
   }
 
   if (loading) return <Loading label="Loading teacher profile…" />
@@ -216,8 +137,6 @@ export function TeacherDetailPage() {
       </div>
     )
   }
-
-  const reassignToSameClass = Boolean(currentClass && classId && Number(classId) === currentClass.classId)
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -248,13 +167,18 @@ export function TeacherDetailPage() {
       </Section>
 
       <Section title="Classes">
-        <div className="mb-4">
-          {currentClass ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-100 bg-brand-50-50 px-4 py-3">
+        <div className="mb-4 space-y-2">
+          {assignedClasses.length === 0 ? (
+            <p className="text-sm text-muted">Not assigned to a class yet.</p>
+          ) : assignedClasses.map((row) => (
+            <div
+              key={row.assignmentId || row.classId}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-100 bg-brand-50-50 px-4 py-3"
+            >
               <div>
-                <p className="font-medium text-ink">{currentClass.className}</p>
+                <p className="font-medium text-ink">{row.className}</p>
                 <p className="text-xs text-muted">
-                  Assigned{currentClass.startDate ? ` · since ${currentClass.startDate}` : ''}
+                  Assigned{row.startDate ? ` · since ${row.startDate}` : ''}
                 </p>
               </div>
               <Button
@@ -262,103 +186,31 @@ export function TeacherDetailPage() {
                 size="sm"
                 disabled={saving}
                 onClick={() => runClassAction(
-                  () => teachersApi.unassignClass(teacherId),
+                  () => teachersApi.unassignClass(teacherId, row.classId),
                   'Teacher removed from class',
                 )}
               >
-                Unassign
+                Remove
               </Button>
             </div>
-          ) : (
-            <p className="text-sm text-muted">Not assigned to a class yet.</p>
-          )}
+          ))}
         </div>
         <div className="max-w-md space-y-3 rounded-xl border border-brand-100 p-4">
-          <h3 className="text-sm font-semibold text-ink">
-            {currentClass ? 'Reassign class' : 'Assign class'}
-          </h3>
-          <p className="text-xs text-muted">Each teacher can only be assigned to one class at a time.</p>
-          <ClassSelect value={classId} onChange={setClassId} classes={classes ?? []} />
+          <h3 className="text-sm font-semibold text-ink">Add class</h3>
+          <p className="text-xs text-muted">A teacher can be assigned to more than one class.</p>
+          <ClassSelect
+            value={classId}
+            onChange={setClassId}
+            classes={availableClasses}
+            alwaysShow
+          />
           <Button
-            disabled={!classId || saving || reassignToSameClass}
-            onClick={() => runClassAction(
-              assignOrReassign,
-              currentClass ? 'Teacher reassigned' : 'Class assigned',
-            )}
+            disabled={!classId || saving}
+            onClick={() => runClassAction(addClass, 'Class assigned')}
           >
-            {saving ? 'Saving…' : currentClass ? 'Reassign to class' : 'Assign class'}
+            {saving ? 'Saving…' : 'Add class'}
           </Button>
         </div>
-      </Section>
-
-      <Section title="Subjects">
-        {!assignedClasses.length ? (
-          <p className="text-sm text-muted">Assign a class first, then choose subjects from that class curriculum.</p>
-        ) : (
-          <div className="space-y-6">
-            {assignedClasses.map((cls) => {
-              const curriculum = curriculumByClass[cls.classId] ?? []
-              const selected = subjectDraft[cls.classId] ?? new Set()
-              return (
-                <div key={cls.classId} className="rounded-xl border border-brand-100 p-4">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-medium text-ink">{cls.className}</h3>
-                    <Button
-                      size="sm"
-                      disabled={saving}
-                      onClick={() => saveSubjectsForClass(cls.classId)}
-                    >
-                      Save subjects
-                    </Button>
-                  </div>
-                  {curriculum.length === 0 ? (
-                    <p className="text-sm text-muted">No subjects on this class curriculum yet.</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {curriculum.map((row) => {
-                        const sid = row.subjectId
-                        const checked = selected.has(sid)
-                        return (
-                          <li key={sid} className="flex items-center gap-2 text-sm">
-                            <input
-                              id={`subj-${cls.classId}-${sid}`}
-                              type="checkbox"
-                              checked={checked}
-                              onChange={(e) => toggleSubject(cls.classId, sid, e.target.checked)}
-                              className="rounded border-border"
-                            />
-                            <label htmlFor={`subj-${cls.classId}-${sid}`}>{subjectName(sid)}</label>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  )}
-                </div>
-              )
-            })}
-            {(data.subjects ?? []).length > 0 && (
-              <div>
-                <h3 className="mb-2 text-sm font-semibold text-ink">Assigned subjects</h3>
-                <Table>
-                  <thead>
-                    <tr>
-                      <Th>Subject</Th>
-                      <Th>Class</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.subjects.map((s) => (
-                      <tr key={s.id} className="border-t border-border">
-                        <Td>{s.subjectName}</Td>
-                        <Td>{s.className}</Td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
-            )}
-          </div>
-        )}
       </Section>
 
       <Section title="Weekly timetable">

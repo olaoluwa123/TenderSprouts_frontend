@@ -148,3 +148,25 @@ html {
     animation: none;
   }
 }
+
+/* Report card preview — content-tight sheet with pink frame */
+.report-card-sheet {
+  max-width: 165mm;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  .report-card-mount {
+    background: transparent !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .report-card-sheet {
+    box-shadow: none !important;
+  }
+}

@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { announcementsApi, attendanceApi, dashboardApi, teachersApi } from '@/api'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardSkeleton } from '@/components/dashboard'
-import { Alert, Button, PageHeader } from '@/components/ui'
+import { ClassSelect } from '@/components/ui/SchoolSelects'
+import { Alert, Button, Field, PageHeader } from '@/components/ui'
 import { useAsync } from '@/hooks/useAsync'
 
 const WEEKDAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY']
@@ -33,8 +35,12 @@ export function TeacherDashboard() {
   const { user } = useAuth()
   const teacherId = user?.profileId
   const today = todayIso()
+  const [classId, setClassId] = useState('')
 
-  const { data, loading, error, reload } = useAsync(() => dashboardApi.teacher(), [])
+  const { data, loading, error, reload } = useAsync(
+    () => dashboardApi.teacher(classId ? { classId: Number(classId) } : undefined),
+    [classId],
+  )
   const { data: assignments } = useAsync(
     () => (teacherId ? teachersApi.classes(teacherId).catch(() => []) : Promise.resolve([])),
     [teacherId],
@@ -47,10 +53,23 @@ export function TeacherDashboard() {
     () => (teacherId ? teachersApi.timetable(teacherId).catch(() => []) : Promise.resolve([])),
     [teacherId],
   )
-  const classId = data?.classId
+  const classList = (data?.classes?.length
+    ? data.classes
+    : (assignments ?? []).length
+      ? assignments
+      : (data?.classId
+        ? [{ classId: data.classId, className: data.className, isActive: true }]
+        : []))
+  const classOptions = classList.map((row) => ({
+    id: row.classId,
+    name: row.className || `Class #${row.classId}`,
+  }))
+  const selectedClassId = classId || (data?.classId ? String(data.classId) : '')
   const { data: attendanceRows } = useAsync(
-    () => (classId ? attendanceApi.byClass(classId, today).catch(() => []) : Promise.resolve([])),
-    [classId, today],
+    () => (selectedClassId
+      ? attendanceApi.byClass(Number(selectedClassId), today).catch(() => [])
+      : Promise.resolve([])),
+    [selectedClassId, today],
   )
   const { data: inbox } = useAsync(() => announcementsApi.inbox().catch(() => []), [])
 
@@ -68,11 +87,6 @@ export function TeacherDashboard() {
   const progress = data?.gradingProgress ?? {}
   const pupilCount = data?.studentCount ?? 0
   const subjectCount = (subjects ?? []).length || progress.subjectCount || 0
-  const classList = (assignments ?? []).length
-    ? assignments
-    : (data?.classId
-      ? [{ classId: data.classId, className: data.className, isActive: true }]
-      : [])
   const todayName = WEEKDAYS[new Date().getDay()]
   const todaySlots = (Array.isArray(timetable) ? timetable : [])
     .filter((slot) => slot.dayOfWeek === todayName)
@@ -108,6 +122,19 @@ export function TeacherDashboard() {
           {data.sessionName} · {data.termName}
           {data.className ? ` · ${data.className}` : ''}
         </p>
+      )}
+
+      {classOptions.length > 1 && (
+        <div className="max-w-xs">
+          <Field label="Class">
+            <ClassSelect
+              value={selectedClassId}
+              onChange={setClassId}
+              classes={classOptions}
+              alwaysShow
+            />
+          </Field>
+        </div>
       )}
 
       {!data?.classId && classList.length === 0 && (
@@ -170,7 +197,7 @@ export function TeacherDashboard() {
             <h2 className="text-sm font-semibold tracking-tight text-ink">Attendance overview</h2>
             <span className="text-xs text-muted">Today</span>
           </div>
-          {!classId ? (
+          {!selectedClassId ? (
             <p className="py-6 text-sm text-muted">Assign a class to see today’s attendance.</p>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

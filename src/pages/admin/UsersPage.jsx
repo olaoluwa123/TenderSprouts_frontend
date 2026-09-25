@@ -1,23 +1,17 @@
 import { useState } from 'react'
 import { usersApi } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
-import { Alert, Badge, Button, Field, Loading, Modal, PageHeader, Select, Table, Td, Th } from '@/components/ui'
+import { roleLabel } from '@/lib/roles'
+import { Alert, Badge, Button, Field, Input, Loading, Modal, PageHeader, Select, Table, Td, Th } from '@/components/ui'
 
 const ROLES = ['ADMIN', 'TEACHER', 'PARENT']
+const CREATE_ROLES = ['ADMIN', 'TEACHER']
 
-function formatWhen(value) {
-  if (!value) return '—'
-  try {
-    return new Date(value).toLocaleString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return value
-  }
+const emptyForm = {
+  email: '',
+  fullName: '',
+  role: 'TEACHER',
+  phone: '',
 }
 
 export function UsersPage() {
@@ -28,10 +22,10 @@ export function UsersPage() {
   )
   const [msg, setMsg] = useState(null)
   const [msgTone, setMsgTone] = useState('success')
-  const [activityUser, setActivityUser] = useState(null)
-  const [activity, setActivity] = useState([])
-  const [activityLoading, setActivityLoading] = useState(false)
-  const [activityError, setActivityError] = useState(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [form, setForm] = useState(emptyForm)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
 
   const showMsg = (text, tone = 'success') => {
     setMsg(text)
@@ -48,48 +42,47 @@ export function UsersPage() {
     }
   }
 
-  const forceReset = async (id) => {
-    try {
-      await usersApi.forcePasswordReset(id)
-      showMsg('Password reset email sent')
-    } catch (err) {
-      showMsg(err?.message || 'Could not send password reset', 'error')
-    }
+  const openCreate = () => {
+    setForm(emptyForm)
+    setSubmitError(null)
+    setCreateOpen(true)
   }
 
-  const changeRole = async (id, nextRole) => {
+  const handleCreate = async (e) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setSubmitError(null)
     try {
-      await usersApi.updateRole(id, nextRole)
-      showMsg(`Role updated to ${nextRole}`)
+      await usersApi.create({
+        email: form.email.trim(),
+        fullName: form.fullName.trim(),
+        role: form.role,
+        phone: form.role === 'TEACHER' && form.phone.trim()
+          ? form.phone.trim()
+          : undefined,
+      })
+      setCreateOpen(false)
+      setForm(emptyForm)
+      showMsg(`Created ${roleLabel(form.role).toLowerCase()} — welcome email queued`)
       reload()
     } catch (err) {
-      showMsg(err?.message || 'Could not change role', 'error')
-      reload()
-    }
-  }
-
-  const openActivity = async (user) => {
-    setActivityUser(user)
-    setActivity([])
-    setActivityError(null)
-    setActivityLoading(true)
-    try {
-      const rows = await usersApi.activity(user.id)
-      setActivity(Array.isArray(rows) ? rows : (rows?.content ?? []))
-    } catch (err) {
-      setActivityError(err?.message || 'Could not load activity')
+      setSubmitError(err?.message || 'Could not create user')
     } finally {
-      setActivityLoading(false)
+      setSubmitting(false)
     }
   }
 
   return (
     <div className="space-y-4">
-      <PageHeader title="User Management" subtitle="Activate, deactivate, roles, and activity" />
+      <PageHeader
+        title="User Management"
+        subtitle="Create admins and teachers, or activate and deactivate portal users"
+        actions={<Button onClick={openCreate}>Create user</Button>}
+      />
       <Field label="Filter by role">
         <Select value={role} onChange={(e) => setRole(e.target.value)} className="max-w-xs">
           <option value="">All roles</option>
-          {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+          {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
         </Select>
       </Field>
       {msg && <Alert tone={msgTone}>{msg}</Alert>}
@@ -101,7 +94,6 @@ export function UsersPage() {
               <Th>Name</Th>
               <Th>Email</Th>
               <Th>Role</Th>
-              <Th>Last login</Th>
               <Th>Status</Th>
               <Th>Actions</Th>
             </tr>
@@ -111,29 +103,16 @@ export function UsersPage() {
               <tr key={u.id} className="border-t border-border">
                 <Td className="font-medium">{u.fullName || '—'}</Td>
                 <Td>{u.email}</Td>
-                <Td>
-                  <Select
-                    value={u.role}
-                    onChange={(e) => changeRole(u.id, e.target.value)}
-                    className="min-w-[8rem]"
-                  >
-                    {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </Select>
-                </Td>
-                <Td>{formatWhen(u.lastLoginAt)}</Td>
+                <Td>{roleLabel(u.role)}</Td>
                 <Td>
                   <Badge tone={u.isActive ? 'success' : 'danger'}>
                     {u.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </Td>
                 <Td>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => toggleStatus(u.id, u.isActive)}>
-                      {u.isActive ? 'Deactivate' : 'Activate'}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => forceReset(u.id)}>Reset password</Button>
-                    <Button size="sm" variant="ghost" onClick={() => openActivity(u)}>Activity</Button>
-                  </div>
+                  <Button size="sm" variant="secondary" onClick={() => toggleStatus(u.id, u.isActive)}>
+                    {u.isActive ? 'Deactivate' : 'Activate'}
+                  </Button>
                 </Td>
               </tr>
             ))}
@@ -141,36 +120,49 @@ export function UsersPage() {
         </Table>
       )}
 
-      <Modal
-        open={Boolean(activityUser)}
-        onClose={() => setActivityUser(null)}
-        title={activityUser ? `Activity · ${activityUser.fullName || activityUser.email}` : 'Activity'}
-      >
-        {activityLoading ? <Loading /> : (
-          <div className="space-y-3">
-            {activityError && <Alert>{activityError}</Alert>}
-            {!activityError && activity.length === 0 && (
-              <p className="text-sm text-muted">No activity recorded for this user.</p>
-            )}
-            {activity.length > 0 && (
-              <ul className="divide-y divide-blossom-100">
-                {activity.map((item, idx) => (
-                  <li key={item.id ?? idx} className="py-3 first:pt-0 last:pb-0">
-                    <p className="text-sm font-medium text-ink">
-                      {item.action || item.eventType || item.description || 'Action'}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted">
-                      {[item.entityType, item.entityId].filter(Boolean).join(' #')}
-                      {item.details ? ` · ${item.details}` : ''}
-                      {' · '}
-                      {formatWhen(item.createdAt || item.timestamp)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create user">
+        <form onSubmit={handleCreate} className="space-y-3">
+          {submitError && <Alert>{submitError}</Alert>}
+          <Field label="Full name">
+            <Input
+              value={form.fullName}
+              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Email">
+            <Input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Role">
+            <Select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value, phone: e.target.value === 'TEACHER' ? form.phone : '' })}
+            >
+              {CREATE_ROLES.map((r) => (
+                <option key={r} value={r}>{roleLabel(r)}</option>
+              ))}
+            </Select>
+          </Field>
+          {form.role === 'TEACHER' && (
+            <Field label="Phone (optional)">
+              <Input
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              />
+            </Field>
+          )}
+          <p className="text-xs text-muted">
+            Creates the account with a temporary password and queues a welcome email. The user must change their password on first sign-in.
+          </p>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? 'Creating…' : 'Create user'}
+          </Button>
+        </form>
       </Modal>
     </div>
   )

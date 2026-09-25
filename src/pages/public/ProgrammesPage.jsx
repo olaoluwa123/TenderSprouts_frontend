@@ -7,6 +7,7 @@ import {
   SectionHeading,
   Sprout,
 } from '@/components/public/primitives'
+import { PHOTOS } from '@/lib/photos'
 
 const PILLARS = [
   {
@@ -34,7 +35,6 @@ const PILLARS = [
     body: 'Through engaging activities and projects, we help students grow spiritually, socially and intellectually to become confident individuals.',
     points: [
       'Sports, movement and wellbeing',
-      'Art, music and creative expression',
       'Public speaking and leadership',
       'Community service and empathy',
     ],
@@ -178,10 +178,33 @@ export function ProgrammesPage() {
             </ol>
           </div>
           <Reveal delay={120} className="grid gap-5 sm:grid-cols-2 lg:content-start">
-            <PhotoPlaceholder label="Morning assembly" ratio="aspect-[3/4]" />
-            <PhotoPlaceholder label="Group work" ratio="aspect-[3/4]" className="sm:mt-12" />
-            <PhotoPlaceholder label="Break time" ratio="aspect-square" className="sm:-mt-4" />
-            <PhotoPlaceholder label="Clubs" ratio="aspect-square" className="sm:mt-8" />
+            <PhotoPlaceholder
+              src={PHOTOS.classroom}
+              alt="Primary classroom during morning lessons"
+              label="Morning assembly"
+              ratio="aspect-[3/4]"
+            />
+            <PhotoPlaceholder
+              src={PHOTOS.groupWork}
+              alt="Children gathered for group work"
+              label="Group work"
+              ratio="aspect-[3/4]"
+              className="sm:mt-12"
+            />
+            <PhotoPlaceholder
+              src={PHOTOS.playIndoor}
+              alt="Indoor play table and toys at break time"
+              label="Break time"
+              ratio="aspect-square"
+              className="sm:-mt-4"
+            />
+            <PhotoPlaceholder
+              src={PHOTOS.playIndoor}
+              alt="Early years club table with toys and activities"
+              label="Clubs"
+              ratio="aspect-square"
+              className="sm:mt-8"
+            />
           </Reveal>
         </div>
       </Section>

@@ -1,5 +1,6 @@
 import { EnquiryForm } from '@/components/public/EnquiryForm'
 import { ActionLink, PageHero, PhotoPlaceholder, Reveal, Section, SectionHeading } from '@/components/public/primitives'
+import { PHOTOS } from '@/lib/photos'
 import { SCHOOL } from '@/lib/school'
 
 const CHANNELS = [
@@ -73,7 +74,12 @@ export function ContactPage() {
               description="Tell us your child’s age and what you would like to know. We read every message."
             />
             <Reveal delay={140} className="mt-10">
-              <PhotoPlaceholder label="School entrance" ratio="aspect-[4/3]" />
+              <PhotoPlaceholder
+                src={PHOTOS.campus}
+                alt="Tender Sprouts school entrance and campus"
+                label="School entrance"
+                ratio="aspect-[4/3]"
+              />
             </Reveal>
           </div>
           <Reveal delay={120}>

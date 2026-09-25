@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { classesApi, parentsApi, studentsApi } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
 import { useActiveSession, useActiveTerm, useAssignedClasses, useSubjects, useTerms } from '@/hooks/useSchoolData'
 import { ClassSelect, TermSelect } from '@/components/ui/SchoolSelects'
-import { Alert, Badge, Button, Field, Input, Loading, Modal, PageHeader, Select, Table, Td, Th } from '@/components/ui'
+import { Alert, Badge, Button, EmptyState, Field, Input, Loading, Modal, PageHeader, Select, Table, Td, Th } from '@/components/ui'
 import { usePermissions } from '@/hooks/usePermissions'
 
 export function ExamTimetablePage() {
@@ -13,7 +13,8 @@ export function ExamTimetablePage() {
   const { data: session } = useActiveSession()
   const { data: activeTerm, error: activeTermError } = useActiveTerm()
   const { data: terms } = useTerms(studentView ? session?.id : undefined)
-  const { data: parentMe } = useAsync(() => studentView ? parentsApi.me() : Promise.resolve(null), [studentView])
+  const { data: parentMe } = useAsync(() => (studentView ? parentsApi.me() : Promise.resolve(null)), [studentView])
+  const children = parentMe?.children ?? []
   const [classId, setClassId] = useState('')
   const [parentTermId, setParentTermId] = useState('')
   const termId = studentView ? parentTermId : (activeTerm?.id ? String(activeTerm.id) : '')
@@ -30,6 +31,20 @@ export function ExamTimetablePage() {
     subjectId: '', termId: '', examDate: '', startTime: '09:00', endTime: '11:00', room: '',
   })
   const [msg, setMsg] = useState(null)
+
+  useEffect(() => {
+    if (!studentView) return
+    if (!studentId && children.length === 1) {
+      setStudentId(String(children[0].id))
+    }
+  }, [studentView, children, studentId])
+
+  useEffect(() => {
+    if (!studentView) return
+    if (!parentTermId && activeTerm?.id) {
+      setParentTermId(String(activeTerm.id))
+    }
+  }, [studentView, activeTerm, parentTermId])
 
   const handleCreate = async (e) => {
     e.preventDefault()
@@ -49,7 +64,7 @@ export function ExamTimetablePage() {
   const publish = async () => {
     if (!classId || !termId) return
     const res = await classesApi.publishExamTimetable(Number(classId), Number(termId))
-    setMsg(`Published ${res.slotsPublished} slots — ${res.parentsNotified} parents emailed`)
+    setMsg(`Published ${res.slotsPublished} slots — ${res.parentsNotified} parents notified`)
     reload()
   }
 
@@ -66,6 +81,11 @@ export function ExamTimetablePage() {
           )
         }
       />
+      {studentView && (
+        <p className="mb-4 text-sm text-muted">
+          Published exam schedules for your child&apos;s class. Draft slots are not shown until the school publishes them.
+        </p>
+      )}
       {!studentView && (
         <div className="mb-4 flex flex-wrap gap-3 items-center">
           <ClassSelect value={classId} onChange={setClassId} classes={classes} className="max-w-xs" />
@@ -78,28 +98,40 @@ export function ExamTimetablePage() {
         </Alert>
       )}
       {studentView && (
-        <div className="mb-4 flex gap-3">
+        <div className="mb-4 flex flex-wrap gap-3">
           <Select value={studentId} onChange={(e) => setStudentId(e.target.value)} className="max-w-xs">
             <option value="">Select child</option>
-            {parentMe?.children.map((c) => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}
+            {children.map((c) => (
+              <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
+            ))}
           </Select>
           <TermSelect value={parentTermId} onChange={setParentTermId} terms={terms ?? []} className="max-w-xs" />
         </div>
       )}
-      {msg && <Alert tone="success">{msg}</Alert>}
+      {msg && <Alert tone="success" className="mb-4">{msg}</Alert>}
       {loading ? <Loading /> : (
-        <Table>
-          <thead><tr><Th>Date</Th><Th>Subject</Th><Th>Time</Th><Th>Room</Th><Th>Status</Th></tr></thead>
-          <tbody>
-            {slots?.map((s) => (
-              <tr key={s.id} className="border-t border-border">
-                <Td>{s.examDate}</Td><Td>{s.subjectName}</Td>
-                <Td>{s.startTime} – {s.endTime}</Td><Td>{s.room || '—'}</Td>
-                <Td>{s.publishedAt ? <Badge tone="success">Published</Badge> : <Badge>Draft</Badge>}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+        <>
+          {studentView && studentId && termId && !(slots?.length) && (
+            <EmptyState
+              title="No published exams yet"
+              description="When the class exam timetable is published, it will appear here."
+            />
+          )}
+          {(!studentView || (slots?.length > 0)) && (
+            <Table>
+              <thead><tr><Th>Date</Th><Th>Subject</Th><Th>Time</Th><Th>Room</Th><Th>Status</Th></tr></thead>
+              <tbody>
+                {slots?.map((s) => (
+                  <tr key={s.id} className="border-t border-border">
+                    <Td>{s.examDate}</Td><Td>{s.subjectName}</Td>
+                    <Td>{s.startTime} – {s.endTime}</Td><Td>{s.room || '—'}</Td>
+                    <Td>{s.publishedAt ? <Badge tone="success">Published</Badge> : <Badge>Draft</Badge>}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </>
       )}
       <Modal open={open} onClose={() => setOpen(false)} title="Add exam slot">
         <form onSubmit={handleCreate} className="space-y-3">

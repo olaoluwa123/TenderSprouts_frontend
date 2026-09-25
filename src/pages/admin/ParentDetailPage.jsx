@@ -124,6 +124,7 @@ export function ParentDetailPage() {
           <InfoRow label="Name" value={data.fullName} />
           <InfoRow label="Email" value={data.email} />
           <InfoRow label="Phone" value={data.phone} />
+          <InfoRow label="Address" value={data.address} />
           <InfoRow
             label="Login status"
             value={data.loginActive === false ? 'Disabled' : 'Active'}

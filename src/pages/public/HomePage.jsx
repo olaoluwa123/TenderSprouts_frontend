@@ -9,6 +9,7 @@ import {
   SectionHeading,
   Sprout,
 } from '@/components/public/primitives'
+import { PHOTOS } from '@/lib/photos'
 import { SCHOOL } from '@/lib/school'
 
 const STATS = [
@@ -121,7 +122,13 @@ function Hero() {
         </div>
 
         <Reveal delay={180} className="relative">
-          <PhotoPlaceholder label="Hero photo — pupils at play" ratio="aspect-[4/5]" className="shadow-2xl shadow-blossom-500/20" />
+          <PhotoPlaceholder
+            src={PHOTOS.campus}
+            alt="Tender Sprouts campus and playground"
+            label="Hero photo — pupils at play"
+            ratio="aspect-[4/5]"
+            className="shadow-2xl shadow-blossom-500/20"
+          />
           <div className="absolute -bottom-6 -left-6 hidden w-56 rounded-2xl bg-white p-5 shadow-xl shadow-blossom-500/15 ring-1 ring-blossom-200 sm:block">
             <p className="font-display text-3xl text-blossom-600">1:8</p>
             <p className="mt-1 text-sm text-ink/60">Teacher to pupil ratio, so no child is overlooked.</p>
@@ -152,8 +159,15 @@ function MissionVision() {
     <Section tone="white">
       <div className="grid gap-14 lg:grid-cols-[1fr_1.1fr] lg:gap-20">
         <Reveal className="relative">
-          <PhotoPlaceholder label="Classroom in session" ratio="aspect-[4/5]" />
           <PhotoPlaceholder
+            src={PHOTOS.classroom}
+            alt="Primary classroom in session"
+            label="Classroom in session"
+            ratio="aspect-[4/5]"
+          />
+          <PhotoPlaceholder
+            src={PHOTOS.reading}
+            alt="Early years reading corner"
             label="Reading corner"
             ratio="aspect-square"
             className="absolute -bottom-10 -right-6 w-44 border-4 border-white sm:w-56"
@@ -269,10 +283,33 @@ function WhyUs() {
         </div>
 
         <Reveal delay={120} className="grid gap-5 sm:grid-cols-2 lg:content-start">
-          <PhotoPlaceholder label="Science project" ratio="aspect-[3/4]" />
-          <PhotoPlaceholder label="Qur’an circle" ratio="aspect-[3/4]" className="sm:mt-12" />
-          <PhotoPlaceholder label="Outdoor play" ratio="aspect-square" className="sm:-mt-4" />
-          <PhotoPlaceholder label="Art & craft" ratio="aspect-square" className="sm:mt-8" />
+          <PhotoPlaceholder
+            src={PHOTOS.classroomAlt}
+            alt="Classroom desks and whiteboard"
+            label="Science project"
+            ratio="aspect-[3/4]"
+          />
+          <PhotoPlaceholder
+            src={PHOTOS.groupWork}
+            alt="Early years group work around a kidney table"
+            label="Qur’an circle"
+            ratio="aspect-[3/4]"
+            className="sm:mt-12"
+          />
+          <PhotoPlaceholder
+            src={PHOTOS.campus}
+            alt="Outdoor play area beside the school"
+            label="Outdoor play"
+            ratio="aspect-square"
+            className="sm:-mt-4"
+          />
+          <PhotoPlaceholder
+            src={PHOTOS.reading}
+            alt="Classroom shelves and activity corner"
+            label="Art & craft"
+            ratio="aspect-square"
+            className="sm:mt-8"
+          />
         </Reveal>
       </div>
     </Section>

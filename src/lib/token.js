@@ -1,8 +1,16 @@
 export function parseAccessTokenPayload(accessToken) {
   if (!accessToken) return null
   try {
-    return JSON.parse(atob(accessToken.split('.')[1]))
+    const segment = accessToken.split('.')[1] || ''
+    const parsed = JSON.parse(atob(segment))
+    // #region agent log
+    fetch('http://127.0.0.1:7816/ingest/dbbb5d66-7a06-4fee-b792-2e85a6c2258b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a93659'},body:JSON.stringify({sessionId:'a93659',hypothesisId:'H5',location:'token.js:parseAccessTokenPayload',message:'jwt payload parse',data:{ok:true,hasUrlChars:/[-_]/.test(segment),hasExp:Boolean(parsed?.exp)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    return parsed
   } catch {
+    // #region agent log
+    fetch('http://127.0.0.1:7816/ingest/dbbb5d66-7a06-4fee-b792-2e85a6c2258b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a93659'},body:JSON.stringify({sessionId:'a93659',hypothesisId:'H5',location:'token.js:parseAccessTokenPayload',message:'jwt payload parse',data:{ok:false,hasUrlChars:/[-_]/.test((accessToken.split('.')[1]||''))},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     return null
   }
 }

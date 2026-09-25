@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { feesApi } from '@/api'
 import { useAsync } from '@/hooks/useAsync'
-import { useActiveSession, useActiveTerm, useClasses, useTerms } from '@/hooks/useSchoolData'
+import { useActiveSession, useActiveTerm, useClasses } from '@/hooks/useSchoolData'
+import { money } from '@/lib/feeBalances'
+import { FeeTabs } from '@/components/fees/FeeTabs'
 import { ClassSelect } from '@/components/ui/SchoolSelects'
-import { Alert, Badge, Button, Field, Input, Loading, Modal, PageHeader, Select, Table, Td, Textarea, Th } from '@/components/ui'
-
-function money(value) {
-  const n = Number(value ?? 0)
-  return n.toLocaleString(undefined, { style: 'currency', currency: 'NGN', minimumFractionDigits: 2 })
-}
+import { Alert, Badge, Button, Field, Input, Loading, Modal, PageHeader, Table, Td, Textarea, Th } from '@/components/ui'
 
 const emptyTemplateRow = () => ({
   key: crypto.randomUUID?.() || String(Date.now() + Math.random()),
@@ -28,16 +25,13 @@ const emptyExtraForm = {
 export function FeesPage() {
   const { data: classes } = useClasses()
   const { data: activeSession } = useActiveSession()
-  const { data: activeTerm } = useActiveTerm()
-  const sessionId = activeSession?.id
-  const { data: terms } = useTerms(sessionId)
+  const { data: activeTerm, error: activeTermError } = useActiveTerm()
 
   const [tab, setTab] = useState('template')
   const [classId, setClassId] = useState('')
-  const [termId, setTermId] = useState('')
   const [msg, setMsg] = useState(null)
 
-  const effectiveTermId = termId || (activeTerm?.id ? String(activeTerm.id) : '')
+  const effectiveTermId = activeTerm?.id ? String(activeTerm.id) : ''
 
   // --- Template state ---
   const [templateRows, setTemplateRows] = useState([])
@@ -87,19 +81,15 @@ export function FeesPage() {
     loading: invoicesLoading,
     reload: reloadInvoices,
   } = useAsync(
-    () => (classId && effectiveTermId && (tab === 'invoices' || tab === 'balances')
-      ? feesApi.invoices(Number(classId), Number(effectiveTermId)).catch(() => [])
+    () => (classId && effectiveTermId && tab === 'invoices'
+      ? feesApi.invoices({ classId: Number(classId), termId: Number(effectiveTermId) }).catch(() => [])
       : Promise.resolve([])),
     [classId, effectiveTermId, tab],
   )
 
   const invoiceRows = Array.isArray(invoices) ? invoices : []
-  const pupilsMissingInvoices = republishPreview?.pupilsMissingInvoices ?? 0
-  const republishPupilNames = (republishPreview?.pupils ?? [])
-    .map((p) => p.studentName)
-    .filter(Boolean)
 
-  const { paidPupils, owingPupils } = useMemo(() => {
+  const aggregatedInvoiceRows = useMemo(() => {
     const byStudent = new Map()
     for (const inv of invoiceRows) {
       if (inv.status === 'CANCELLED') continue
@@ -109,25 +99,45 @@ export function FeesPage() {
           studentId: key,
           studentName: inv.studentName || `Pupil #${key}`,
           admissionNumber: inv.admissionNumber || '—',
-          totalAmount: 0,
-          paidAmount: 0,
+          amount: 0,
           outstandingAmount: 0,
+          dueDates: [],
+          pendingIds: [],
         })
       }
       const row = byStudent.get(key)
       const amount = Number(inv.amount || 0)
-      row.totalAmount += amount
-      if (inv.status === 'PAID') row.paidAmount += amount
-      else if (inv.status === 'PENDING') row.outstandingAmount += amount
+      row.amount += amount
+      if (inv.status === 'PENDING') {
+        row.outstandingAmount += amount
+        if (inv.id != null) row.pendingIds.push(inv.id)
+      }
+      if (inv.dueDate) row.dueDates.push(inv.dueDate)
     }
-    const all = [...byStudent.values()].sort((a, b) =>
-      String(a.studentName).localeCompare(String(b.studentName)),
-    )
-    return {
-      paidPupils: all.filter((p) => p.outstandingAmount <= 0 && p.totalAmount > 0),
-      owingPupils: all.filter((p) => p.outstandingAmount > 0),
-    }
+
+    return [...byStudent.values()]
+      .map((row) => {
+        const dueDate = row.dueDates.length
+          ? [...row.dueDates].sort()[0]
+          : null
+        return {
+          studentId: row.studentId,
+          studentName: row.studentName,
+          admissionNumber: row.admissionNumber,
+          feeName: 'School fees',
+          amount: row.amount,
+          dueDate,
+          status: row.outstandingAmount > 0 ? 'PENDING' : 'PAID',
+          pendingIds: row.pendingIds,
+        }
+      })
+      .sort((a, b) => String(a.studentName).localeCompare(String(b.studentName)))
   }, [invoiceRows])
+
+  const pupilsMissingInvoices = republishPreview?.pupilsMissingInvoices ?? 0
+  const republishPupilNames = (republishPreview?.pupils ?? [])
+    .map((p) => p.studentName)
+    .filter(Boolean)
 
   useEffect(() => {
     let cancelled = false
@@ -254,7 +264,8 @@ export function FeesPage() {
       const result = await feesApi.publish(Number(classId), Number(effectiveTermId))
       setMsg(
         `Published to parents — ${result.invoicesCreated} invoice(s) created`
-        + (result.structuresPublished ? `, ${result.structuresPublished} new line item(s) published` : ''),
+        + (result.structuresPublished ? `, ${result.structuresPublished} new line item(s) published` : '')
+        + (result.parentsNotified != null ? `, ${result.parentsNotified} parent email(s) queued` : ''),
       )
       reloadStructures()
       reloadInvoices()
@@ -278,7 +289,8 @@ export function FeesPage() {
     try {
       const result = await feesApi.republish(Number(classId), Number(effectiveTermId))
       setMsg(
-        `Republished fees — ${result.invoicesCreated} invoice(s) created for ${result.pupilsInvoiced} pupil(s)`,
+        `Republished fees — ${result.invoicesCreated} invoice(s) created for ${result.pupilsInvoiced} pupil(s)`
+        + (result.parentsNotified != null ? `, ${result.parentsNotified} parent email(s) queued` : ''),
       )
       reloadStructures()
       reloadInvoices()
@@ -313,81 +325,70 @@ export function FeesPage() {
     }
   }
 
-  const handleMarkPaid = async (invoice) => {
+  const handleMarkPaid = async (row) => {
+    const pendingIds = row.pendingIds ?? []
+    if (!pendingIds.length) return
     try {
-      await feesApi.markPaid(invoice.id)
-      setMsg(`Marked paid: ${invoice.studentName} · ${invoice.feeName}`)
+      for (const id of pendingIds) {
+        await feesApi.markPaid(id)
+      }
+      setMsg(`Marked paid: ${row.studentName} · School fees`)
       reloadInvoices()
     } catch (err) {
       setMsg(err.message || 'Could not mark paid')
+      reloadInvoices()
     }
   }
-
-  const tabs = [
-    { id: 'template', label: 'Template' },
-    { id: 'term', label: 'Term fees' },
-    { id: 'invoices', label: 'Invoices' },
-    { id: 'balances', label: 'Paid / Owing' },
-  ]
 
   return (
     <div>
       <PageHeader
         title="School fees"
         subtitle="One fee template for every class — change figures per class each term"
-        actions={tab === 'term' ? (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="secondary"
-              disabled={!classId || !effectiveTermId || !items.length || figuresSaving}
-              onClick={saveFigures}
-            >
-              {figuresSaving ? 'Saving…' : 'Save figures'}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={!classId || !effectiveTermId || !items.length}
-              onClick={handlePublish}
-            >
-              Publish to parents
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={!classId || !effectiveTermId || !hasPublishedFees || pupilsMissingInvoices === 0}
-              onClick={handleRepublish}
-            >
-              {pupilsMissingInvoices > 0
-                ? `Republish for new pupils (${pupilsMissingInvoices})`
-                : 'Republish for new pupils'}
-            </Button>
-            <Button
-              disabled={!classId || !effectiveTermId}
-              onClick={() => { setExtraOpen(true); setExtraError(null); setExtraForm(emptyExtraForm) }}
-            >
-              Add one-off item
-            </Button>
-          </div>
-        ) : tab === 'template' ? (
-          <Button disabled={templateSaving} onClick={saveTemplate}>
-            {templateSaving ? 'Saving…' : 'Save template for all classes'}
-          </Button>
-        ) : null}
+        actions={(
+          <>
+            {tab === 'term' ? (
+              <>
+                <Button
+                  variant="secondary"
+                  disabled={!classId || !effectiveTermId || !items.length || figuresSaving}
+                  onClick={saveFigures}
+                >
+                  {figuresSaving ? 'Saving…' : 'Save figures'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={!classId || !effectiveTermId || !items.length}
+                  onClick={handlePublish}
+                >
+                  Publish to parents
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={!classId || !effectiveTermId || !hasPublishedFees || pupilsMissingInvoices === 0}
+                  onClick={handleRepublish}
+                >
+                  {pupilsMissingInvoices > 0
+                    ? `Republish for new pupils (${pupilsMissingInvoices})`
+                    : 'Republish for new pupils'}
+                </Button>
+                <Button
+                  disabled={!classId || !effectiveTermId}
+                  onClick={() => { setExtraOpen(true); setExtraError(null); setExtraForm(emptyExtraForm) }}
+                >
+                  Add one-off item
+                </Button>
+              </>
+            ) : tab === 'template' ? (
+              <Button disabled={templateSaving} onClick={saveTemplate}>
+                {templateSaving ? 'Saving…' : 'Save template for all classes'}
+              </Button>
+            ) : null}
+          </>
+        )}
       />
 
-      <div className="mb-4 flex gap-2">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-              tab === t.id ? 'bg-blossom-100 text-blossom-700' : 'bg-white text-muted hover:bg-blossom-50'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <FeeTabs active={tab} onSelect={setTab} />
 
       <div className={`mb-4 grid gap-3 ${tab === 'template' ? '' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
         {tab !== 'template' && (
@@ -396,13 +397,19 @@ export function FeesPage() {
           </Field>
         )}
         {tab !== 'template' && (
-          <Field label="Term">
-            <Select value={effectiveTermId} onChange={(e) => setTermId(e.target.value)}>
-              <option value="">Select term</option>
-              {(terms ?? []).map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </Select>
+          <Field label="Current period">
+            <div className="flex min-h-[42px] flex-wrap items-center gap-2">
+              {activeSession && (
+                <Badge tone="success">{activeSession.name}</Badge>
+              )}
+              {activeTerm ? (
+                <Badge tone="success">{activeTerm.name}</Badge>
+              ) : (
+                <p className="text-sm text-muted">
+                  {activeTermError || 'No active term — set one under Sessions.'}
+                </p>
+              )}
+            </div>
           </Field>
         )}
         {tab === 'term' && (
@@ -497,7 +504,9 @@ export function FeesPage() {
         <p className="text-sm text-muted">Select a class to continue.</p>
       ) : tab === 'term' ? (
         !effectiveTermId ? (
-          <p className="text-sm text-muted">Select a term to set figures.</p>
+          <Alert tone="info">
+            {activeTermError || 'No active term configured. An admin must activate a term under Sessions before setting term fees.'}
+          </Alert>
         ) : (
           <>
             {structuresError && <Alert>{structuresError}</Alert>}
@@ -577,87 +586,9 @@ export function FeesPage() {
           </>
         )
       ) : !effectiveTermId ? (
-        <p className="text-sm text-muted">
-          Select a term to view {tab === 'balances' ? 'balances' : 'invoices'}.
-        </p>
-      ) : tab === 'balances' ? (
-        invoicesLoading ? <Loading /> : (
-          <div className="space-y-8">
-            <section>
-              <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-ink">Pupils owing</h3>
-                  <p className="text-xs text-muted">Any unpaid published fee for this class and term</p>
-                </div>
-                <Badge tone="warning">{owingPupils.length}</Badge>
-              </div>
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Pupil</Th>
-                    <Th>Admission #</Th>
-                    <Th>Billed</Th>
-                    <Th>Paid</Th>
-                    <Th>Outstanding</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {owingPupils.length === 0 ? (
-                    <tr>
-                      <Td colSpan={5} className="text-muted">
-                        No pupils owing for this class and term.
-                      </Td>
-                    </tr>
-                  ) : owingPupils.map((p) => (
-                    <tr key={p.studentId} className="border-t border-border">
-                      <Td className="font-medium">{p.studentName}</Td>
-                      <Td>{p.admissionNumber}</Td>
-                      <Td className="tabular-nums">{money(p.totalAmount)}</Td>
-                      <Td className="tabular-nums">{money(p.paidAmount)}</Td>
-                      <Td className="tabular-nums font-medium text-brand-700">{money(p.outstandingAmount)}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </section>
-
-            <section>
-              <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-ink">Pupils fully paid</h3>
-                  <p className="text-xs text-muted">All published fee items for this class and term are paid</p>
-                </div>
-                <Badge tone="success">{paidPupils.length}</Badge>
-              </div>
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Pupil</Th>
-                    <Th>Admission #</Th>
-                    <Th>Billed</Th>
-                    <Th>Paid</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paidPupils.length === 0 ? (
-                    <tr>
-                      <Td colSpan={4} className="text-muted">
-                        No fully paid pupils for this class and term yet.
-                      </Td>
-                    </tr>
-                  ) : paidPupils.map((p) => (
-                    <tr key={p.studentId} className="border-t border-border">
-                      <Td className="font-medium">{p.studentName}</Td>
-                      <Td>{p.admissionNumber}</Td>
-                      <Td className="tabular-nums">{money(p.totalAmount)}</Td>
-                      <Td className="tabular-nums">{money(p.paidAmount)}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </section>
-          </div>
-        )
+        <Alert tone="info">
+          {activeTermError || 'No active term configured. An admin must activate a term under Sessions before viewing invoices.'}
+        </Alert>
       ) : invoicesLoading ? <Loading /> : (
         <Table>
           <thead>
@@ -671,14 +602,14 @@ export function FeesPage() {
             </tr>
           </thead>
           <tbody>
-            {invoiceRows.length === 0 ? (
+            {aggregatedInvoiceRows.length === 0 ? (
               <tr>
                 <Td colSpan={6} className="text-muted">
                   No invoices yet. Publish term fees to create parent-facing invoices.
                 </Td>
               </tr>
-            ) : invoiceRows.map((inv) => (
-              <tr key={inv.id} className="border-t border-border">
+            ) : aggregatedInvoiceRows.map((inv) => (
+              <tr key={inv.studentId} className="border-t border-border">
                 <Td>
                   <p className="font-medium">{inv.studentName}</p>
                   <p className="text-xs text-muted">{inv.admissionNumber}</p>
@@ -687,7 +618,7 @@ export function FeesPage() {
                 <Td className="tabular-nums">{money(inv.amount)}</Td>
                 <Td>{inv.dueDate || '—'}</Td>
                 <Td>
-                  <Badge tone={inv.status === 'PAID' ? 'success' : inv.status === 'CANCELLED' ? 'danger' : 'warning'}>
+                  <Badge tone={inv.status === 'PAID' ? 'success' : 'warning'}>
                     {inv.status}
                   </Badge>
                 </Td>
